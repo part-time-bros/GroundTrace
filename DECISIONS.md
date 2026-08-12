@@ -35,3 +35,12 @@ One line per call made without spec guidance, newest last.
 - **`verify` says "not scanned" rather than printing a confidence number it can't back.** If the app never came up, the box reports `unknown`. A verification tool that guesses is worse than none, because you would believe it.
 - **Tracked ids come from runtime `produces` first, static scan second.** The demo passes ids as JSX expressions (`data-truth-id={id}`), which no regex can resolve; the instrumented server code states its ids outright.
 - **`mountOverlay` registers itself on `window.__groundtrace__` and retires any previous instance.** `groundtrace run` injects the overlay into every HTML response, so an app that already mounts its own would otherwise handle every click twice.
+
+## V2
+
+- **§10 drives a real browser instead of reading the DOM itself.** Loading the page through the collector's own proxy makes the app's SDK report the values it actually rendered — first-hand evidence, and it works for apps that host no collector of their own. Manually scraping text out of elements would have re-implemented the SDK, badly.
+- **Playwright is resolved at runtime, never depended on.** Forcing a browser download on every user to make one optional feature work is a bad trade; `verify` degrades to the server-side basis and says so.
+- **`verify` reports which basis it used.** "3 tracked values" from a real render and "3 tracked values" inferred from server declarations are different claims, and printing them identically would be exactly the quiet overstatement this tool exists to catch.
+- **A browser cache with a mismatched Playwright build is discovered, not fatal.** Playwright pins an exact browser build per release; a shared cache provisioned for another version otherwise fails with a bare "Executable doesn't exist".
+- **The demo's toggle now defaults from `SIMULATE_API_FAILURE`.** It was hardcoded `useState(true)`, so the env var could never affect anything that loaded the page — including §10's browser scan, which could only ever see the failure state.
+- **`waitForApp` bails when the app process exits.** A dev server that refuses to start (Next exits when another instance owns the project directory) will not start ninety seconds later; waiting only delays a diagnosable error.

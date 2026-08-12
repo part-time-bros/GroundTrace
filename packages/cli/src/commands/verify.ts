@@ -16,6 +16,7 @@ import {
   type ServerTrace,
 } from "@groundtrace/core";
 import { startApp, waitForApp } from "../app-process.js";
+import { scanInBrowser } from "../browser.js";
 import { loadConfig, type GroundTraceConfig } from "../config.js";
 import { scanProject } from "../scan.js";
 import { startCollectorServer } from "../server.js";
@@ -29,6 +30,14 @@ export interface BuildEvidence {
   tail: string;
 }
 
+/**
+ * How the client half of each value was obtained. `dom` means a real browser
+ * rendered the page and the SDK reported real values — the only basis on which
+ * a displayed number can be *proven* to match its source. `inferred` means the
+ * scan verified the server side only.
+ */
+export type ObservationBasis = "dom" | "inferred";
+
 export interface ProvenanceEvidence {
   ran: boolean;
   /** Why it didn't run, when it didn't. */
@@ -36,6 +45,9 @@ export interface ProvenanceEvidence {
   report?: ProvenanceReport;
   routesExercised: number;
   idsFromSource: number;
+  basis?: ObservationBasis;
+  /** Why the browser scan was skipped, when it was. */
+  basisReason?: string;
 }
 
 export interface VerifyResult {
@@ -53,6 +65,9 @@ export interface VerifyOptions {
   skipTests?: boolean;
   /** Already-running app to scan instead of starting one. */
   appUrl?: string;
+  /** Skip the real-DOM scan even when a browser is available. */
+  noBrowser?: boolean;
+  browserPath?: string;
   configOverrides?: Partial<GroundTraceConfig>;
 }
 
@@ -120,12 +135,20 @@ async function scanProvenance(
 ): Promise<ProvenanceEvidence> {
   const scan = scanProject(options.cwd, config.scan);
 
-  const collector = await startCollectorServer({ port: 0, store: new EventStore() });
+  const appUrl = options.appUrl ?? `http://127.0.0.1:${config.appPort}`;
+
+  // Proxying to the app is what makes the browser scan work: the page is served
+  // from the collector's own origin, so the SDK's reports — which always post to
+  // `location.origin` — land here rather than 404ing against an app that hosts
+  // no collector of its own.
+  const collector = await startCollectorServer({
+    port: 0,
+    store: new EventStore(),
+    proxyTo: appUrl,
+  });
   let app: ReturnType<typeof startApp> | undefined;
 
   try {
-    const appUrl = options.appUrl ?? `http://127.0.0.1:${config.appPort}`;
-
     let reachable = await waitForApp(appUrl, 2_000);
     if (!reachable && options.appUrl === undefined) {
       app = startApp({
@@ -137,7 +160,7 @@ async function scanProvenance(
           PORT: String(config.appPort),
         },
       });
-      reachable = await waitForApp(appUrl, 90_000);
+      reachable = await waitForApp(appUrl, 90_000, app);
     }
 
     if (!reachable) {
@@ -149,6 +172,20 @@ async function scanProvenance(
       };
     }
 
+    // A real browser first, when one is available: loading the page through the
+    // collector's proxy makes the app's own SDK report the values it actually
+    // rendered, which is the only way to prove a displayed number matches its
+    // source rather than assuming it.
+    const browser = options.noBrowser
+      ? { ran: false, reason: "--no-browser", routesVisited: 0, domIds: [] }
+      : await scanInBrowser({
+          url: collector.url,
+          routes: config.routes,
+          ...(options.browserPath !== undefined
+            ? { browserPath: options.browserPath }
+            : {}),
+        });
+
     const traceIds = await exerciseRoutes(appUrl, config.routes);
 
     // Traces reach us either through the collector we just started (the app is
@@ -159,23 +196,37 @@ async function scanProvenance(
       ...(await fetchRemoteTraces(appUrl)),
     ]);
 
-    // Two sources of tracked ids, and the runtime one is the stronger:
+    // Real client events, if the browser scan produced any.
+    const observed = collector.store.nodes();
+    const observedIds = new Set(observed.map((node) => node.id));
+
+    // Two further sources of tracked ids, and the runtime one is the stronger:
     // instrumented code states outright which values each source `produces`,
     // where the static scan can only find ids written as string literals (the
     // demo passes them as JSX expressions, so a scan alone finds nothing).
-    const ids = [...new Set([...producedIds(traces), ...scan.trackedIds])].sort();
+    const declaredIds = [
+      ...new Set([...producedIds(traces), ...scan.trackedIds, ...browser.domIds]),
+    ]
+      .filter((id) => !observedIds.has(id))
+      .sort();
 
-    const nodes = syntheticNodes(ids, traces, traceIds);
+    const nodes = [...observed, ...syntheticNodes(declaredIds, traces, traceIds)];
     const report = buildReport(
       { nodes, traces },
       { knownLiterals: scan.fallbackLiterals },
     );
 
+    const basis: ObservationBasis = observed.length > 0 ? "dom" : "inferred";
+
     return {
       ran: true,
       report,
-      routesExercised: traceIds.length,
+      routesExercised: Math.max(traceIds.length, browser.routesVisited),
       idsFromSource: scan.trackedIds.length,
+      basis,
+      ...(basis === "inferred" && browser.reason !== undefined
+        ? { basisReason: browser.reason }
+        : {}),
     };
   } finally {
     await app?.stop();
@@ -314,7 +365,7 @@ export function formatVerify(result: VerifyResult): string {
   }
 
   const report = provenance.report;
-  lines.push(`Tracked values   ${report.tracked}`);
+  lines.push(`Tracked values   ${report.tracked}${basisNote(provenance)}`);
 
   for (const status of [
     "VERIFIED",
@@ -336,6 +387,18 @@ export function formatVerify(result: VerifyResult): string {
 
   lines.push(`Confidence       ${confidenceLabel(report)}`);
   return box("GROUNDTRACE VERIFICATION", lines, 29);
+}
+
+/**
+ * The report has to say which kind of evidence it is built on. "3 tracked
+ * values" from a real page render and "3 tracked values" inferred from server
+ * declarations are not the same claim, and printing them identically would be
+ * the sort of quiet overstatement this tool exists to catch.
+ */
+function basisNote(provenance: ProvenanceEvidence): string {
+  if (provenance.basis === "dom") return paint("  (rendered in a browser)", "gray");
+  const why = provenance.basisReason !== undefined ? `: ${provenance.basisReason}` : "";
+  return paint(`  (server side only — no DOM scan${why})`, "gray");
 }
 
 function confidenceLabel(report: ProvenanceReport): string {

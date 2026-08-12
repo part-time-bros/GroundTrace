@@ -90,4 +90,51 @@ describe.skipIf(skip)("groundtrace verify against the reference demo", () => {
       expect(verifyExitCode(result)).toBe(0);
     },
   );
+
+  it(
+    "proves the displayed value against the source when a browser is available",
+    { timeout: 240_000 },
+    async () => {
+      const result = await verifyDemo(false, 3103);
+      const revenue = result.provenance.report!.values.find(
+        (value) => value.id === "revenue",
+      );
+
+      if (result.provenance.basis === "dom") {
+        // V2_SPEC §10: a real render is the only basis on which the displayed
+        // number can be *proven* to match its source.
+        expect(revenue?.reason).toContain("matches what it returned");
+        expect(formatVerify(result)).toContain("rendered in a browser");
+      } else {
+        // No browser here — the weaker basis must be stated, not glossed over.
+        expect(formatVerify(result)).toContain("server side only");
+      }
+    },
+  );
+
+  it(
+    "still works with the real-DOM scan explicitly disabled",
+    { timeout: 240_000 },
+    async () => {
+      const previous = process.env["SIMULATE_API_FAILURE"];
+      process.env["SIMULATE_API_FAILURE"] = "true";
+      try {
+        const result = await runVerify({
+          cwd: DEMO,
+          quiet: true,
+          skipBuild: true,
+          skipTests: true,
+          noBrowser: true,
+          configOverrides: { appPort: 3104 },
+        });
+
+        expect(result.provenance.basis).toBe("inferred");
+        expect(result.provenance.report?.counts.FALLBACK).toBe(3);
+        expect(formatVerify(result)).toContain("server side only");
+      } finally {
+        if (previous === undefined) delete process.env["SIMULATE_API_FAILURE"];
+        else process.env["SIMULATE_API_FAILURE"] = previous;
+      }
+    },
+  );
 });

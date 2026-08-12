@@ -87,11 +87,24 @@ export function startApp(options: StartAppOptions): AppProcess {
   };
 }
 
-/** Polls until the app answers, or gives up. Returns whether it came up. */
-export async function waitForApp(url: string, timeoutMs = 60_000): Promise<boolean> {
+/**
+ * Polls until the app answers, or gives up. Returns whether it came up.
+ *
+ * `app` lets it bail the moment the process dies rather than serving out the
+ * full timeout — a dev server that refuses to start (Next, for one, exits when
+ * another instance already owns the project directory) is not going to start
+ * ninety seconds later, and the wait only delays a diagnosable error.
+ */
+export async function waitForApp(
+  url: string,
+  timeoutMs = 60_000,
+  app?: AppProcess,
+): Promise<boolean> {
   const deadline = Date.now() + timeoutMs;
 
   while (Date.now() < deadline) {
+    if (app?.child.exitCode !== null && app?.child.exitCode !== undefined) return false;
+
     try {
       const response = await fetch(url, {
         signal: AbortSignal.timeout(3_000),

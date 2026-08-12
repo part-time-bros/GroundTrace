@@ -31,6 +31,12 @@ export {
   type CollectorServerOptions,
 } from "./server.js";
 export {
+  discoverBrowserPath,
+  scanInBrowser,
+  type BrowserScanOptions,
+  type BrowserScanResult,
+} from "./browser.js";
+export {
   startApp,
   waitForApp,
   type AppProcess,
@@ -59,6 +65,7 @@ export {
   runVerify,
   verifyExitCode,
   type BuildEvidence,
+  type ObservationBasis,
   type ProvenanceEvidence,
   type VerifyOptions,
   type VerifyResult,

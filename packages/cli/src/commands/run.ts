@@ -48,7 +48,7 @@ export async function runRun(options: RunOptions): Promise<number> {
   console.log(paint("  dev mode only — do not run this in production", "gray"));
   console.log("");
 
-  const ready = await waitForApp(appUrl, 90_000);
+  const ready = await waitForApp(appUrl, 90_000, app);
   if (!ready) {
     console.error(
       paint(`the app never became reachable at ${appUrl}`, "red") +

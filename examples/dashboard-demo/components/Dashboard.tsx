@@ -13,10 +13,14 @@ import { TraceScope, useTracedQuery, useTruthValue } from "@groundtrace/react";
 import type { RevenuePayload } from "../app/api/revenue/route";
 import { formatCount, formatCurrency, formatPercent, toPercent } from "../lib/format";
 
-export function Dashboard() {
-  // The env var sets the initial server-side default (`true`); this toggle then
-  // flips it live, so a screen recording never has to restart anything.
-  const [simulateFailure, setSimulateFailure] = useState(true);
+export function Dashboard({
+  initialSimulateFailure = true,
+}: {
+  /** Where the toggle starts — set from `SIMULATE_API_FAILURE` on the server. */
+  initialSimulateFailure?: boolean;
+}) {
+  // Flips live from here, so a screen recording never has to restart anything.
+  const [simulateFailure, setSimulateFailure] = useState(initialSimulateFailure);
   const { data, traceId, loading, error } = useTracedQuery<RevenuePayload>(
     `/api/revenue?fail=${simulateFailure ? "1" : "0"}`,
   );

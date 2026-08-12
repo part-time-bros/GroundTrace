@@ -31,6 +31,8 @@ Commands
                             --skip-build        skip the build step
                             --skip-tests        skip the test step
                             --url <url>         scan an app that's already running
+                            --no-browser        skip the real-DOM scan
+                            --browser-path <p>  explicit Chromium binary
   report                  Print the last verify run without re-running anything
                             --id <value-id>     print one value's provenance tree
                             --json              print the raw saved result
@@ -97,6 +99,10 @@ export async function dispatch(args: ParsedArgs): Promise<number> {
         quiet,
         skipBuild: flagBool(args, "skip-build"),
         skipTests: flagBool(args, "skip-tests"),
+        noBrowser: flagBool(args, "no-browser"),
+        ...(flagString(args, "browser-path") !== undefined
+          ? { browserPath: flagString(args, "browser-path")! }
+          : {}),
         ...(flagString(args, "url") !== undefined
           ? { appUrl: flagString(args, "url")! }
           : {}),
