@@ -15,7 +15,15 @@ Phase status: NOT_STARTED / IN_PROGRESS / DONE / BLOCKED
 
 ## Blocked
 
-(nothing yet)
+Nothing. Two issues were hit and resolved rather than parked:
+
+- The overlay reported `UNTRACED` on the first click against a cold dev server. Root cause was
+  real (the collector route takes ~1s to compile, so the click's query beat the first client
+  report) and is fixed by a flush handshake plus making the client transport awaitable.
+- The `verify` end-to-end tests failed once in a fresh clone. Diagnosed to a stray `next dev`
+  left over from an earlier screenshot run — Next 16 refuses a second dev server for the same
+  directory, so the spawned app never started. Not a product defect, but `verify` now includes
+  the app's own output in its failure message instead of only "never became reachable".
 
 ## Log
 
