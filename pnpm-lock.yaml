@@ -79,6 +79,19 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
+  packages/auto:
+    dependencies:
+      '@groundtrace/core':
+        specifier: workspace:*
+        version: link:../core
+      bippy:
+        specifier: ^0.6.1
+        version: 0.6.1(react@19.2.8)
+    devDependencies:
+      jsdom:
+        specifier: ^30.0.1
+        version: 30.0.1
+
   packages/cli:
     dependencies:
       '@groundtrace/core':

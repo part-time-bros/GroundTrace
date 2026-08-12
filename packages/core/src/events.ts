@@ -69,6 +69,18 @@ export interface ClientNodeEvent {
    * source feeds it, but never saw anything rendered. Defaults to true.
    */
   valueObserved?: boolean;
+  /**
+   * True when this value was matched automatically (V2_SPEC §14) rather than
+   * declared with `useTruthValue`. The correlation is inferred from the value
+   * itself, so it is evidence rather than proof.
+   */
+  auto?: boolean;
+  /**
+   * How many distinct tracked ids the auto-matched value could have come from.
+   * Anything above 1 means the match is ambiguous and must not be presented as
+   * settled.
+   */
+  candidates?: number;
   /** Named transform(s) applied between the API response and the DOM. */
   transform?: string | string[];
   /** Component that rendered it, when the SDK could work it out. */

@@ -1,0 +1,34 @@
+{
+  "name": "@groundtrace/auto",
+  "version": "0.1.0",
+  "description": "Zero-config GroundTrace: tags displayed values by matching them against traced sources, with no useTruthValue calls.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@groundtrace/core": "workspace:*",
+    "bippy": "^0.6.1"
+  },
+  "devDependencies": {
+    "jsdom": "^30.0.1"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

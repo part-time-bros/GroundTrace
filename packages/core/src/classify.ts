@@ -151,6 +151,8 @@ function decide(
   matched: TraceEvent[],
   options: ClassifyOptions,
 ): Verdict {
+  const ambiguous = client.auto === true && (client.candidates ?? 1) > 1;
+
   // Rule 2 — a failed source outranks everything downstream of it.
   const failure = matched.find((event) => event.status === "FALLBACK_TRIGGERED");
   if (failure !== undefined) {
@@ -182,6 +184,17 @@ function decide(
     };
   }
 
+  // An ambiguous automatic match that landed on a *healthy* source proves
+  // nothing about this particular element: several values on the page share the
+  // number, and we cannot tell which source fed this one. (An ambiguous match on
+  // a failed source is handled above — a possible fallback is worth surfacing.)
+  if (ambiguous) {
+    return {
+      status: "UNTRACED",
+      reason: `"${client.id}" was matched automatically, but ${client.candidates} tracked values share this number — which source fed this element cannot be determined`,
+    };
+  }
+
   const transform = transformList(client.transform);
   const proof = passthroughProof(client, verified);
 
@@ -202,11 +215,12 @@ function decide(
 
   // Rule 4 — a real source succeeded and the number on screen is its number.
   const sourceId = verified[0]!.sourceId;
+  const inferred = client.auto === true ? " (matched automatically, not declared)" : "";
   return {
     status: "VERIFIED",
     reason:
       proof === "proven"
-        ? `"${sourceId}" succeeded and the displayed value matches what it returned`
+        ? `"${sourceId}" succeeded and the displayed value matches what it returned${inferred}`
         : proof === "unobserved"
           ? `"${sourceId}" succeeded; this scan verified the server side only and never read the rendered value`
           : `"${sourceId}" succeeded and no transform was declared (the source did not record its value, so the match is assumed)`,
