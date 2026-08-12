@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import type { ClientNodeEvent } from "@groundtrace/core";
-import { configureClient, flushNodes, resetClient } from "./client.js";
+import { configureClient, flushNodes, resetClient, whenReported } from "./client.js";
 import { Truth } from "./Truth.js";
 import { TraceScope } from "./trace-scope.js";
 import { stableKey, useTruthValue } from "./useTruthValue.js";
@@ -306,5 +306,46 @@ describe("default transport", () => {
     expect(calls[0]?.url).toContain("/__groundtrace/nodes");
     expect(calls[0]?.body).toHaveLength(1);
     vi.unstubAllGlobals();
+  });
+});
+
+describe("whenReported", () => {
+  it("does not resolve until the transport's request has actually landed", async () => {
+    resetClient();
+    let deliver: (() => void) | undefined;
+    let landed = false;
+
+    configureClient({
+      transport: () =>
+        new Promise<void>((resolve) => {
+          deliver = () => {
+            landed = true;
+            resolve();
+          };
+        }),
+    });
+
+    render(<Revenue value={1} />);
+
+    // The regression this guards: the default transport used to fire the POST
+    // with `void fetch(...)`, so the handshake resolved instantly and the
+    // overlay queried the collector before any event had arrived.
+    const ready = whenReported();
+    let resolvedEarly = false;
+    void ready.then(() => {
+      resolvedEarly = !landed;
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(resolvedEarly).toBe(false);
+
+    await act(async () => {
+      deliver?.();
+      await ready;
+    });
+    expect(landed).toBe(true);
   });
 });

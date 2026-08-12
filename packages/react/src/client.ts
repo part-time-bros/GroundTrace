@@ -33,20 +33,28 @@ export function clientConfig(): ClientConfig {
   return { ...config };
 }
 
-function defaultTransport(events: ClientNodeEvent[]): void {
-  if (typeof window === "undefined") return;
+/**
+ * Returns the request's promise rather than firing and forgetting it — the
+ * `whenReported()` handshake is only meaningful if it can actually await the
+ * delivery, and a `void fetch(...)` here silently resolved it instantly.
+ */
+function defaultTransport(events: ClientNodeEvent[]): Promise<void> {
+  if (typeof window === "undefined") return Promise.resolve();
   const url = new URL(NODES_PATH, config.endpoint ?? window.location.origin);
   const body = JSON.stringify(events);
 
   // `keepalive` so a value reported during a navigation still lands.
-  void fetch(url, {
+  return fetch(url, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body,
     keepalive: true,
-  }).catch(() => {
-    // The collector being down must never surface in the app being observed.
-  });
+  }).then(
+    () => undefined,
+    () => {
+      // The collector being down must never surface in the app being observed.
+    },
+  );
 }
 
 let pending: ClientNodeEvent[] = [];
