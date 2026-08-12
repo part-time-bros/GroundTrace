@@ -33,6 +33,23 @@ export {
   type CollectorConfig,
 } from "./sink.js";
 export { traceIdFrom, traceRoute, type TraceRouteOptions } from "./next.js";
+export {
+  groundtraceFastify,
+  groundtraceMiddleware,
+  traceIdFromHeaders,
+  withTracedRequest,
+  type FastifyLike,
+  type MiddlewareOptions,
+  type TracedRequest,
+  type TracedResponse,
+} from "./middleware.js";
+export {
+  instrumentedGetAsync,
+  instrumentedQueryAsync,
+  type AsyncQueryOptions,
+  type AsyncQueryable,
+  type QueryResult,
+} from "./postgres.js";
 export type {
   ClientNodeEvent,
   ProvenanceStatus,
