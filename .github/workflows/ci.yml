@@ -63,13 +63,41 @@ jobs:
       - run: pnpm build
 
       # A real browser is what lets `verify` prove a displayed number matches
-      # its source rather than checking only the server side.
+      # its source rather than checking only the server side. Playwright is
+      # never a dependency of the CLI (see packages/cli/src/browser.ts), so the
+      # browser is installed through the `playwright-core` dev dependency —
+      # there is no `playwright` binary here to call.
       - name: Install Chromium
-        run: pnpm --filter groundtrace exec playwright install --with-deps chromium
+        run: pnpm --filter groundtrace exec playwright-core install --with-deps chromium
 
+      # GROUNDTRACE_REQUIRE_BROWSER turns the suite's "no browser here" branch
+      # into a failure. This job installs one on purpose; if the scan silently
+      # fell back to the server-side basis, the job would be green while
+      # testing nothing it was created to test.
       - name: Boot the demo and verify both toggle states
         run: pnpm --filter groundtrace exec vitest run src/verify-demo.test.ts
+        env:
+          GROUNDTRACE_REQUIRE_BROWSER: "1"
 
-      - name: Verify the demo's own displayed values
-        run: node packages/cli/dist/bin.js verify --cwd examples/dashboard-demo --skip-build --skip-tests --json
-        continue-on-error: true
+      # The step above calls runVerify() directly. This one goes through the
+      # binary that actually ships, which is the only check that `bin.js`,
+      # argument parsing and the JSON output still work together.
+      - name: Verify the demo through the shipped binary
+        env:
+          SIMULATE_API_FAILURE: "false"
+          REPORT: ${{ runner.temp }}/verify.json
+        run: |
+          node packages/cli/dist/bin.js verify \
+            --cwd examples/dashboard-demo --skip-build --skip-tests --json \
+            | tee "$REPORT"
+          node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            const result = JSON.parse(readFileSync(process.env.REPORT, "utf8"));
+            const fail = (message) => {
+              console.error(`::error::${message}`);
+              process.exit(1);
+            };
+            if (result.basis !== "dom") fail(`expected a real-DOM scan, got basis=${result.basis}`);
+            if (result.confidence !== 1) fail(`expected 100% confidence, got ${result.confidence}`);
+            if (!result.ok) fail("verify reported the healthy demo as not ok");
+          '

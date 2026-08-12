@@ -20,6 +20,13 @@ const skip =
   !existsSync(resolve(DEMO, "package.json"));
 
 /**
+ * A missing browser is a fine reason to fall back to the server-side basis on
+ * a contributor's machine, but not somewhere that installed one on purpose.
+ * CI sets this so a silent fallback fails instead of passing quietly.
+ */
+const requireBrowser = process.env["GROUNDTRACE_REQUIRE_BROWSER"] === "1";
+
+/**
  * The demo defaults to the failure state and reads `SIMULATE_API_FAILURE` from
  * its environment, which `verify` passes down to the app it spawns.
  */
@@ -99,6 +106,10 @@ describe.skipIf(skip)("groundtrace verify against the reference demo", () => {
       const revenue = result.provenance.report!.values.find(
         (value) => value.id === "revenue",
       );
+
+      if (requireBrowser) {
+        expect(result.provenance.basis).toBe("dom");
+      }
 
       if (result.provenance.basis === "dom") {
         // V2_SPEC §10: a real render is the only basis on which the displayed
