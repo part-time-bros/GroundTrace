@@ -11,7 +11,16 @@
  * sketch does — captures React's effect-flush frames instead of the component.
  */
 
-/** Frames belonging to GroundTrace itself, or to React's own machinery. */
+/**
+ * Frames to skip.
+ *
+ * Matching on our own *function names* rather than on file paths is deliberate:
+ * once a bundler has run, this package's code lives in a chunk called something
+ * like `_08osfea._.js`, and any path-based filter silently stops working —
+ * which shows up as the overlay proudly reporting `captureCallSite` as the
+ * source of every value.
+ */
+const OWN_FRAMES = /\b(?:captureCallSite|useTruthValue|Truth)\b/;
 const INTERNAL = /groundtrace|node_modules[/\\](?:react|next|scheduler)[/\\]/i;
 
 export function captureCallSite(stack?: string): string | undefined {
@@ -20,11 +29,17 @@ export function captureCallSite(stack?: string): string | undefined {
 
   const frames = raw
     .split("\n")
-    .slice(1)
+    // V8 prefixes the stack with the error's own message line; other engines
+    // (Firefox, Safari) start straight at the first frame.
+    .filter((line) => /^\s*(?:at\s|.+@)/.test(line))
     .map((line) => line.trim())
     .filter((line) => line !== "");
 
-  const frame = frames.find((line) => !INTERNAL.test(line)) ?? frames[0];
+  const frame =
+    frames.find((line) => !OWN_FRAMES.test(line) && !INTERNAL.test(line)) ??
+    frames.find((line) => !OWN_FRAMES.test(line)) ??
+    frames[0];
+
   return frame === undefined ? undefined : prettifyFrame(frame);
 }
 
@@ -35,7 +50,12 @@ export function captureCallSite(stack?: string): string | undefined {
  */
 export function prettifyFrame(frame: string): string {
   const cleaned = frame.replace(/^at\s+/, "");
-  const match = /^(.*?)\s*\((.+)\)$/.exec(cleaned);
+
+  // Two stack dialects: V8's `fn (location)` and SpiderMonkey/JSC's `fn@location`.
+  const parenForm = /^(.*?)\s*\((.+)\)$/.exec(cleaned);
+  const atForm = parenForm === null ? /^([^@]*)@(.+)$/.exec(cleaned) : null;
+  const match = parenForm ?? atForm;
+
   const fnName = match?.[1]?.trim();
   const location = match?.[2] ?? cleaned;
 

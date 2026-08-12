@@ -1,0 +1,141 @@
+:root {
+  color-scheme: dark;
+  --bg: #09090b;
+  --panel: #111113;
+  --border: #232327;
+  --text: #e4e4e7;
+  --muted: #8b8b93;
+  --faint: #52525b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+}
+
+.shell {
+  max-width: 940px;
+  margin: 0 auto;
+  padding: 48px 24px 80px;
+}
+
+header.top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+h1 {
+  font-size: 22px;
+  margin: 0 0 4px;
+  letter-spacing: -0.01em;
+}
+
+.subtitle {
+  color: var(--muted);
+  font-size: 13.5px;
+  margin: 0;
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 13px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--panel);
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.toggle input {
+  accent-color: #fb923c;
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  cursor: pointer;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px;
+  margin: 28px 0 20px;
+}
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--panel);
+  padding: 18px 18px 16px;
+}
+
+.card .label {
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.card .figure {
+  font-size: 31px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.card .note {
+  color: var(--faint);
+  font-size: 11.5px;
+  margin-top: 7px;
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 13px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-top: 22px;
+  line-height: 1.6;
+}
+
+.hint code {
+  color: var(--text);
+  font-size: 12.5px;
+}
+
+.hint .strong {
+  color: var(--text);
+}
+
+footer.meta {
+  color: var(--faint);
+  font-size: 11.5px;
+  margin-top: 22px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.loading {
+  color: var(--faint);
+}

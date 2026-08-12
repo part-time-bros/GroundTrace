@@ -81,7 +81,13 @@ export function buildPanel(doc: Document, value: ValueProvenance): PanelHandles 
 
   // --- tree ---------------------------------------------------------------
   const tree = el(doc, "pre", "tree");
-  for (const row of flattenTree(value.tree)) {
+  // The root node's detail is the verdict's reason, which the footer already
+  // states in full. Printing it inside the tree as well makes it the widest
+  // line in the panel and says nothing new.
+  const rows = flattenTree(value.tree).filter(
+    (row) => !(row.isDetail && row.label === value.reason),
+  );
+  for (const row of rows) {
     const line = el(doc, "span", "row");
     line.append(el(doc, "span", "prefix", row.prefix));
 
