@@ -37,7 +37,7 @@ export function parseDisplayedNumber(text: string): number | undefined {
   const negative = /^\(.*\)$/.test(trimmed);
   const cleaned = trimmed
     .replace(/^\(|\)$/g, "")
-    .replace(/[\s ]/g, "")
+    .replace(/[\s\u00a0\u202f\u2009]/g, "")
     // Currency symbols and the percent sign, but not digits, separators or signs.
     .replace(/[^\d.,+-]/g, "");
 

@@ -1,0 +1,55 @@
+# Reusable CI job: fails the build when the app displays values that aren't
+# backed by real sources (V2_SPEC §16).
+name: GroundTrace
+
+on:
+  workflow_call:
+    inputs:
+      fail-under:
+        description: "Minimum confidence percentage required to pass."
+        type: number
+        default: 100
+      working-directory:
+        description: "Directory of the app to verify."
+        type: string
+        default: "."
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm test
+
+      # A real browser is what lets the scan prove a displayed number matches
+      # its source rather than verifying only the server side.
+      - run: pnpm exec playwright install --with-deps chromium
+        continue-on-error: true
+
+      - name: Verify displayed values
+        working-directory: ${{ inputs.working-directory || '.' }}
+        run: >
+          npx groundtrace verify
+          --skip-build --skip-tests
+          --fail-under ${{ inputs.fail-under || 100 }}
+
+      - name: Upload provenance report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: groundtrace-report
+          path: .groundtrace/last-verify.json
+          if-no-files-found: ignore

@@ -70,6 +70,8 @@ export {
   formatFlagged,
   formatVerify,
   runVerify,
+  toHookPayload,
+  toJson,
   verifyExitCode,
   type BuildEvidence,
   type ObservationBasis,

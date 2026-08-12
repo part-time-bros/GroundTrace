@@ -7,6 +7,8 @@ import {
   formatFlagged,
   formatVerify,
   runVerify,
+  toHookPayload,
+  toJson,
   verifyExitCode,
 } from "./commands/verify.js";
 import { runVerifyTests } from "./commands/verify-tests.js";
@@ -34,6 +36,9 @@ Commands
                             --url <url>         scan an app that's already running
                             --no-browser        skip the real-DOM scan
                             --browser-path <p>  explicit Chromium binary
+                            --json              machine-readable report on stdout
+                            --fail-under <n>    fail below n% confidence (CI gate)
+                            --block             emit Claude Code hook JSON
   report                  Print the last verify run without re-running anything
                             --id <value-id>     print one value's provenance tree
                             --json              print the raw saved result
@@ -116,6 +121,22 @@ export async function dispatch(args: ParsedArgs): Promise<number> {
 
       saveVerifyResult(cwd, result);
 
+      const failUnder =
+        args.flags["fail-under"] !== undefined
+          ? flagNumber(args, "fail-under", 100)
+          : undefined;
+
+      if (flagBool(args, "block")) {
+        // Claude Code reads this off stdout, so nothing else may go there.
+        console.log(JSON.stringify(toHookPayload(result, failUnder)));
+        return 0;
+      }
+
+      if (flagBool(args, "json")) {
+        console.log(toJson(result, failUnder));
+        return verifyExitCode(result, failUnder);
+      }
+
       if (!quiet) {
         console.log(formatVerify(result));
         const flagged = formatFlagged(result);
@@ -125,7 +146,7 @@ export async function dispatch(args: ParsedArgs): Promise<number> {
         }
       }
 
-      return verifyExitCode(result);
+      return verifyExitCode(result, failUnder);
     }
 
     case "report":

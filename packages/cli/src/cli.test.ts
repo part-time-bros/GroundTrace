@@ -30,7 +30,12 @@ import {
 import { injectOverlayTag, startCollectorServer, OVERLAY_PATH } from "./server.js";
 import { loadVerifyResult, saveVerifyResult } from "./report-store.js";
 import type { VerifyResult } from "./commands/verify.js";
-import { formatVerify, verifyExitCode } from "./commands/verify.js";
+import {
+  formatVerify,
+  toHookPayload,
+  toJson,
+  verifyExitCode,
+} from "./commands/verify.js";
 
 let dir: string;
 
@@ -488,5 +493,78 @@ describe("writeMcpConfig", () => {
     const result = runInit({ cwd: dir, quiet: true, mcp: true });
     expect(result.mcpWritten).toBe(true);
     expect(existsSync(join(dir, MCP_CONFIG_FILENAME))).toBe(true);
+  });
+});
+
+// --- §16 CI integration and the blocking hook ------------------------------
+
+describe("verifyExitCode with a threshold", () => {
+  it("passes when confidence clears --fail-under", () => {
+    expect(verifyExitCode(sampleResult(2 / 3), 50)).toBe(0);
+  });
+
+  it("fails when it does not", () => {
+    expect(verifyExitCode(sampleResult(2 / 3), 100)).toBe(1);
+  });
+
+  it("defaults to strict — anything under 100% fails", () => {
+    expect(verifyExitCode(sampleResult(0.99))).toBe(1);
+  });
+
+  it("does not fail a run whose scan never happened", () => {
+    const result = sampleResult(1);
+    result.provenance = {
+      ran: false,
+      skipped: "app unreachable",
+      routesExercised: 0,
+      idsFromSource: 0,
+    };
+    expect(verifyExitCode(result, 100)).toBe(0);
+  });
+});
+
+describe("toJson", () => {
+  it("emits a parseable report naming the flagged value", () => {
+    const parsed = JSON.parse(toJson(sampleResult(2 / 3), 100)) as {
+      ok: boolean;
+      confidence: number;
+      values: { id: string; status: string }[];
+    };
+    expect(parsed.ok).toBe(false);
+    expect(parsed.confidence).toBeCloseTo(2 / 3);
+    expect(parsed.values[0]?.id).toBe("revenue");
+  });
+
+  it("marks a run that clears the threshold as ok", () => {
+    expect((JSON.parse(toJson(sampleResult(2 / 3), 50)) as { ok: boolean }).ok).toBe(
+      true,
+    );
+  });
+});
+
+describe("toHookPayload", () => {
+  it("blocks with the reason when confidence falls short", () => {
+    const payload = toHookPayload(sampleResult(2 / 3), 100);
+    expect(payload.decision).toBe("block");
+    expect(payload.reason).toContain("revenue");
+    expect(payload.reason).toContain("not backed by live data");
+  });
+
+  it("says nothing when the run is fine — the hook must not block by default", () => {
+    const clean = sampleResult(1);
+    clean.provenance.report!.counts = {
+      VERIFIED: 3,
+      INDIRECT: 0,
+      FALLBACK: 0,
+      SYNTHETIC: 0,
+      UNTRACED: 0,
+    };
+    clean.provenance.report!.values = [];
+    expect(toHookPayload(clean)).toEqual({});
+  });
+
+  it("is valid JSON, since Claude Code reads it off stdout", () => {
+    const payload = toHookPayload(sampleResult(0), 100);
+    expect(() => JSON.parse(JSON.stringify(payload))).not.toThrow();
   });
 });

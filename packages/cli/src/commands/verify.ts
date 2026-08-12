@@ -423,13 +423,88 @@ function testMark(tests: TestEvidence): string {
   return status === "VERIFIED" ? `${tick("")}${counts}` : `${cross(status)}${counts}`;
 }
 
-/** Non-zero when anything verifiable came back short. */
-export function verifyExitCode(result: VerifyResult): number {
+/**
+ * Non-zero when anything verifiable came back short.
+ *
+ * `failUnder` (0–100) is the CI gate: below it, the run fails. Without it the
+ * default is strict — any confidence under 100% is a failure — which is the
+ * right default for a tool whose whole point is catching the thing you missed.
+ */
+export function verifyExitCode(result: VerifyResult, failUnder?: number): number {
   if (result.build.ran && result.build.exitCode !== 0) return 1;
   if (result.tests.executed && statusOf(result.tests) === "UNVERIFIED") return 1;
+
   const confidence = result.provenance.report?.confidence;
-  if (confidence !== undefined && confidence !== null && confidence < 1) return 1;
-  return 0;
+  if (confidence === undefined || confidence === null) return 0;
+
+  const threshold = failUnder === undefined ? 1 : failUnder / 100;
+  return confidence < threshold ? 1 : 0;
+}
+
+/** Machine-readable form of a run, for CI and any other tooling. */
+export function toJson(result: VerifyResult, failUnder?: number): string {
+  const report = result.provenance.report;
+  return JSON.stringify(
+    {
+      ok: verifyExitCode(result, failUnder) === 0,
+      confidence: report?.confidence ?? null,
+      tracked: report?.tracked ?? 0,
+      counts: report?.counts ?? {},
+      basis: result.provenance.basis ?? null,
+      scanRan: result.provenance.ran,
+      skipped: result.provenance.skipped ?? null,
+      build: result.build.ran ? { exitCode: result.build.exitCode } : null,
+      tests: result.tests.executed
+        ? {
+            status: statusOf(result.tests),
+            passed: result.tests.testsPassed,
+            failed: result.tests.testsFailed,
+            discovered: result.tests.testsDiscovered,
+          }
+        : null,
+      values: (report?.values ?? []).map((value) => ({
+        id: value.id,
+        status: value.status,
+        reason: value.reason,
+        source: value.source,
+      })),
+      generatedAt: result.generatedAt,
+    },
+    null,
+    2,
+  );
+}
+
+/**
+ * The Claude Code hook payload (V2_SPEC §16).
+ *
+ * BUILD_SPEC §8 deferred blocking until the confidence score had a track
+ * record; §10's real-DOM scan is what gives it one. It stays opt-in — a hook
+ * that blocks on a heuristic by default would create loops long before it
+ * caught a real bug.
+ */
+export function toHookPayload(
+  result: VerifyResult,
+  failUnder?: number,
+): { decision?: "block"; reason?: string } {
+  if (verifyExitCode(result, failUnder) === 0) return {};
+
+  const flagged = formatFlagged(result);
+  const report = result.provenance.report;
+  const percent =
+    report?.confidence === null || report?.confidence === undefined
+      ? "unknown"
+      : `${Math.round(report.confidence * 100)}%`;
+
+  return {
+    decision: "block",
+    reason: [
+      `GroundTrace confidence is ${percent}. Some displayed values are not backed by real sources:`,
+      ...flagged,
+      "",
+      "Fix these before reporting the task as complete, or explain why they are expected.",
+    ].join("\n"),
+  };
 }
 
 export function formatFlagged(result: VerifyResult): string[] {

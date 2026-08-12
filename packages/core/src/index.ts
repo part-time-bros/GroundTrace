@@ -20,6 +20,7 @@ export {
   deepEqual,
   formatValue,
   matchServerEvents,
+  valuesMatch,
   type ClassifyOptions,
 } from "./classify.js";
 export {
@@ -29,6 +30,18 @@ export {
   type CollectorRequest,
   type CollectorResponse,
 } from "./collector.js";
+export {
+  applySafety,
+  applySafetyToValues,
+  hash,
+  isSampled,
+  redactValue,
+  resolveSafety,
+  type GroundTraceMode,
+  type RedactedValue,
+  type ResolvedSafety,
+  type SafetyOptions,
+} from "./redact.js";
 export {
   flattenTree,
   renderTree,

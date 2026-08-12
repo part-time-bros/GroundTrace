@@ -28,6 +28,7 @@ import type {
   ValueProvenance,
 } from "./events.js";
 import { STATUS_ORDER } from "./events.js";
+import { redactValue, type RedactedValue } from "./redact.js";
 
 export interface ClassifyOptions {
   /**
@@ -237,7 +238,7 @@ function passthroughProof(client: ClientNodeEvent, verified: TraceEvent[]): Pass
   for (const event of verified) {
     const recorded = event.values;
     if (recorded === undefined || !(client.id in recorded)) continue;
-    return deepEqual(recorded[client.id], client.value) ? "proven" : "mismatch";
+    return valuesMatch(recorded[client.id], client.value) ? "proven" : "mismatch";
   }
   return "unrecorded";
 }
@@ -365,6 +366,30 @@ function matchesLiteral(value: unknown, literals: unknown[] | undefined): boolea
 
 function rank(status: ProvenanceStatus): number {
   return STATUS_ORDER.indexOf(status);
+}
+
+function isRedacted(value: unknown): value is RedactedValue {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    (value as RedactedValue).redacted === true
+  );
+}
+
+/**
+ * Compares a recorded source value against a displayed one.
+ *
+ * In production mode the recorded side is redacted to a digest (see
+ * `redact.ts`), so equality is checked by redacting the displayed value the same
+ * way. Equal digests mean equal values — which is all a passthrough proof ever
+ * needed.
+ */
+export function valuesMatch(recorded: unknown, displayed: unknown): boolean {
+  if (isRedacted(recorded)) {
+    if (isRedacted(displayed)) return recorded.digest === displayed.digest;
+    return recorded.digest === redactValue(displayed).digest;
+  }
+  return deepEqual(recorded, displayed);
 }
 
 export function deepEqual(a: unknown, b: unknown): boolean {
