@@ -2,6 +2,25 @@
   "name": "@groundtrace/overlay",
   "version": "0.1.0",
   "description": "GroundTrace browser overlay: click a [data-truth-id] element, see its provenance tree.",
+  "keywords": [
+    "groundtrace",
+    "provenance",
+    "data-lineage",
+    "debugging",
+    "observability",
+    "devtools",
+    "overlay",
+    "browser"
+  ],
+  "homepage": "https://github.com/part-time-bros/GroundTrace#readme",
+  "bugs": {
+    "url": "https://github.com/part-time-bros/GroundTrace/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/part-time-bros/GroundTrace.git",
+    "directory": "packages/overlay"
+  },
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -20,7 +39,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json && node scripts/bundle.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "prepublishOnly": "pnpm run build"
   },
   "dependencies": {
     "@groundtrace/core": "workspace:*",

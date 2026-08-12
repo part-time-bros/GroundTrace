@@ -2,7 +2,30 @@
   "name": "@groundtrace/mcp",
   "version": "0.1.0",
   "description": "GroundTrace as MCP tools — let an agent check whether the numbers it just wired up are real.",
+  "keywords": [
+    "groundtrace",
+    "provenance",
+    "data-lineage",
+    "debugging",
+    "observability",
+    "mcp",
+    "model-context-protocol",
+    "ai-agents",
+    "claude"
+  ],
+  "homepage": "https://github.com/part-time-bros/GroundTrace#readme",
+  "bugs": {
+    "url": "https://github.com/part-time-bros/GroundTrace/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/part-time-bros/GroundTrace.git",
+    "directory": "packages/mcp"
+  },
   "license": "MIT",
+  "engines": {
+    "node": ">=22.6.0"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -22,7 +45,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "prepublishOnly": "pnpm run build"
   },
   "dependencies": {
     "@groundtrace/core": "workspace:*",

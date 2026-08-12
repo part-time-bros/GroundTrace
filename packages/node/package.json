@@ -2,7 +2,30 @@
   "name": "@groundtrace/node",
   "version": "0.1.0",
   "description": "GroundTrace server SDK: request-scoped provenance tracking for Node (Next.js route handlers, SQLite queries, fetch).",
+  "keywords": [
+    "groundtrace",
+    "provenance",
+    "data-lineage",
+    "debugging",
+    "observability",
+    "nodejs",
+    "nextjs",
+    "asynclocalstorage",
+    "server"
+  ],
+  "homepage": "https://github.com/part-time-bros/GroundTrace#readme",
+  "bugs": {
+    "url": "https://github.com/part-time-bros/GroundTrace/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/part-time-bros/GroundTrace.git",
+    "directory": "packages/node"
+  },
   "license": "MIT",
+  "engines": {
+    "node": ">=22.6.0"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -19,7 +42,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "prepublishOnly": "pnpm run build"
   },
   "dependencies": {
     "@groundtrace/core": "workspace:*"

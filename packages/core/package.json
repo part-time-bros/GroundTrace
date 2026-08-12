@@ -2,7 +2,28 @@
   "name": "@groundtrace/core",
   "version": "0.1.0",
   "description": "GroundTrace correlation + classification engine: raw client/server events in, provenance trees out.",
+  "keywords": [
+    "groundtrace",
+    "provenance",
+    "data-lineage",
+    "debugging",
+    "observability",
+    "classification",
+    "tracing"
+  ],
+  "homepage": "https://github.com/part-time-bros/GroundTrace#readme",
+  "bugs": {
+    "url": "https://github.com/part-time-bros/GroundTrace/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/part-time-bros/GroundTrace.git",
+    "directory": "packages/core"
+  },
   "license": "MIT",
+  "engines": {
+    "node": ">=22.6.0"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -19,7 +40,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "prepublishOnly": "pnpm run build"
   },
   "publishConfig": {
     "access": "public"
