@@ -66,6 +66,17 @@ Producing the screenshots surfaced and fixed a real cold-start race: on a fresh 
 311 tests. Two defects found by validating `auto` against the real demo rather than jsdom
 fixtures: percentages never matched their source ratio, and `scan()` returned only the delta.
 
+CI is green on GitHub, not only locally. It took three runs to get there, and each failure was
+the kind this project exists to catch: `pnpm/action-setup` had no version to install (the repo
+had neither a `version` input nor a `packageManager` field); then the e2e job called a
+`playwright` binary that does not exist here, because the CLI depends on `playwright-core` and
+resolves Playwright at runtime on purpose. Fixing the second one exposed a third, quieter
+problem — the demo suite's browser test passes whether or not a browser is present, so the job
+could have reported success while never running the browser path it exists to run.
+`GROUNDTRACE_REQUIRE_BROWSER=1` now makes that a failure, and the final step asserts on
+`verify --json` through `dist/bin.js` instead of `continue-on-error`. Run 3 downloaded a real
+Chromium and reported `basis: "dom"`, `confidence: 1`.
+
 ### V2 log
 
 - **Phase 10 — Real DOM scan.** `verify` loads each route in a real browser (Playwright resolved at runtime, never a dependency) so the app's own SDK reports the values it rendered. Closes V1's one structural weakness: it can now *prove* a displayed number matches its source instead of verifying the server side and marking the value unobserved. The report states which basis it used. Acceptance: healthy demo → "matches what it returned" with `(rendered in a browser)`; `--no-browser` → the weaker basis, stated plainly; failure state → FALLBACK, 0%, under both.
