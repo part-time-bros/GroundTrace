@@ -1,5 +1,6 @@
 // @ts-check
 import js from "@eslint/js";
+import reactHooks from "eslint-plugin-react-hooks";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
@@ -35,6 +36,15 @@ export default tseslint.config(
         __dirname: "readonly",
         URL: "readonly",
       },
+    },
+  },
+  {
+    // Rules of Hooks matter most in the React SDK and the demo's components.
+    files: ["packages/react/**/*.{ts,tsx}", "examples/**/*.{ts,tsx}"],
+    plugins: { "react-hooks": reactHooks },
+    rules: {
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "warn",
     },
   },
   {
