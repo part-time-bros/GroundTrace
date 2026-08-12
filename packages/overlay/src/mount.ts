@@ -215,8 +215,28 @@ function enhanceFocus(doc: Document): () => void {
   };
 }
 
+/**
+ * The React SDK publishes this once it has values to report. Awaiting it closes
+ * a cold-start race: on a fresh dev server the collector route can take a
+ * second to compile, and a click that beats the first report would otherwise
+ * get a truthful-but-useless UNTRACED.
+ */
+async function awaitPendingReports(): Promise<void> {
+  const ready = (globalThis as Record<string, unknown>)["__groundtraceReady__"];
+  if (typeof ready !== "function") return;
+  try {
+    await Promise.race([
+      (ready as () => Promise<void>)(),
+      new Promise((resolve) => setTimeout(resolve, 3_000)),
+    ]);
+  } catch {
+    // The handshake is an optimisation; never let it block opening the panel.
+  }
+}
+
 function makeFetcher(endpoint: string | undefined) {
   return async (id: string): Promise<ValueProvenance> => {
+    await awaitPendingReports();
     const base = endpoint ?? globalThis.location?.origin ?? "http://localhost";
     const url = new URL(`${COLLECTOR_BASE}/value`, base);
     url.searchParams.set("id", id);

@@ -6,6 +6,7 @@ export {
   flushNodes,
   reportNode,
   resetClient,
+  whenReported,
   type ClientConfig,
   type NodeTransport,
 } from "./client.js";
