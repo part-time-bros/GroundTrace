@@ -7,3 +7,7 @@ One line per call made without spec guidance, newest last.
 - **`docs/BUILD_SPEC.md`.** The spec shipped at the repo root but `CLAUDE.md` references `docs/BUILD_SPEC.md`; moved it there rather than editing every reference.
 - **`tsc` for package builds, no bundler.** Only the browser overlay needs bundling (esbuild, one IIFE); everything else ships as plain ESM from `tsc`, which keeps `pnpm build` fast and dependency-light.
 - **A fifth package, `packages/overlay`.** §5's overlay is framework-free DOM code that both the demo (imported as a module) and the CLI (served as a prebuilt IIFE for injection into arbitrary apps) need. Keeping it out of `@groundtrace/react` avoids forcing a React dependency on the CLI.
+- **No argument-parsing dependency.** Five subcommands and a handful of flags did not justify `commander`; `packages/cli/src/args.ts` is ~60 lines and unit-tested.
+- **A third test-claim status, `INCONCLUSIVE`.** §1's spec names VERIFIED and UNVERIFIED. A command that exits 0 but proves no tests (`echo hi`, the §1 acceptance case) is neither: calling it VERIFIED would be exactly the fabricated confidence this tool exists to catch.
+- **`TestEvidence` also carries `testsFailed`, `executed`, and `runner`.** §1's own UNVERIFIED example prints "3 failures in the raw output below", which needs a failure count the sketched interface didn't have.
+- **pytest is unavailable in the build container**, so its parser is covered by fixture tests only; vitest is verified end-to-end against real passing and real failing suites.

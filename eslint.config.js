@@ -25,6 +25,19 @@ export default tseslint.config(
     },
   },
   {
+    // Plain-JS build scripts run under Node; typescript-eslint already disables
+    // no-undef for .ts files, so only these need the globals declared.
+    files: ["**/*.mjs", "**/*.cjs", "**/scripts/**/*.js"],
+    languageOptions: {
+      globals: {
+        console: "readonly",
+        process: "readonly",
+        __dirname: "readonly",
+        URL: "readonly",
+      },
+    },
+  },
+  {
     files: ["**/*.test.ts", "**/*.test.tsx"],
     rules: {
       "@typescript-eslint/no-non-null-assertion": "off",
