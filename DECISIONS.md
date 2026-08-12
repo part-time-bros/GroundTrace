@@ -57,3 +57,4 @@ One line per call made without spec guidance, newest last.
 - **Redaction keeps the signal and drops the contents.** A recorded value becomes a type, a magnitude bucket, and a digest; `valuesMatch` compares digests, so passthrough proof still works while the customer's revenue figure never leaves the process.
 - **Sampling is deterministic on the trace id.** A half-sampled trace would produce a value whose source was dropped, which the classifier would correctly but uselessly report as UNTRACED.
 - **`--block` is opt-in, and BUILD_SPEC §8's deferral is now discharged.** §10's real-DOM scan is what gave the confidence score a basis worth blocking on; blocking by default would still create loops before it caught a real bug.
+- **The Vue SDK required no changes to `@groundtrace/core`.** That was the point of §17: the client half of the protocol is event-shaped rather than React-shaped, and porting to another reactivity system proved it.
