@@ -21,6 +21,7 @@ Usage
 Commands
   init                    Add GroundTrace config to an existing Next.js project
                             --claude-code-hook  also add a Claude Code Stop hook
+                            --mcp               register the MCP server in .mcp.json
                             --force             overwrite an existing config
   run                     Start the app + correlation server + overlay together
                             --port <n>          port to open (default 7777)
@@ -41,6 +42,10 @@ Options
   --cwd <dir>             Project directory (default: current)
   --quiet                 Suppress output (exit code still reflects the result)
   --help                  Show this message
+
+Agents
+  groundtrace-mcp         MCP server exposing provenance as agent-callable tools
+                          (groundtrace init --mcp registers it for Claude Code)
 
 Examples
   groundtrace verify-tests -- pytest -q
@@ -66,6 +71,7 @@ export async function dispatch(args: ParsedArgs): Promise<number> {
       runInit({
         cwd,
         claudeCodeHook: flagBool(args, "claude-code-hook"),
+        mcp: flagBool(args, "mcp"),
         force: flagBool(args, "force"),
         quiet,
       });

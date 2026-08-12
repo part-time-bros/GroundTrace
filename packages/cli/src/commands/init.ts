@@ -13,13 +13,22 @@ import {
   saveConfig,
   type GroundTraceConfig,
 } from "../config.js";
-import { HOOK_COMMAND, mergeStopHook, type ClaudeSettings } from "../claude-hook.js";
+import {
+  HOOK_COMMAND,
+  MCP_CONFIG_FILENAME,
+  mergeMcpServer,
+  mergeStopHook,
+  type ClaudeSettings,
+  type McpConfig,
+} from "../claude-hook.js";
 import { paint, tick } from "../ui.js";
 
 export interface InitOptions {
   cwd: string;
   /** Also add the Claude Code `Stop` hook (BUILD_SPEC §8). */
   claudeCodeHook?: boolean;
+  /** Also register the MCP server in `.mcp.json` (V2_SPEC §11). */
+  mcp?: boolean;
   force?: boolean;
   quiet?: boolean;
 }
@@ -29,6 +38,8 @@ export interface InitResult {
   configWritten: boolean;
   settingsPath?: string;
   settingsWritten?: boolean;
+  mcpPath?: string;
+  mcpWritten?: boolean;
 }
 
 export function runInit(options: InitOptions): InitResult {
@@ -47,6 +58,12 @@ export function runInit(options: InitOptions): InitResult {
     const hook = writeClaudeHook(options.cwd);
     result.settingsPath = hook.path;
     result.settingsWritten = hook.written;
+  }
+
+  if (options.mcp === true) {
+    const mcp = writeMcpConfig(options.cwd);
+    result.mcpPath = mcp.path;
+    result.mcpWritten = mcp.written;
   }
 
   if (options.quiet !== true) {
@@ -113,6 +130,34 @@ export function writeClaudeHook(cwd: string): { path: string; written: boolean }
   return { path, written: true };
 }
 
+/**
+ * Writes `.mcp.json` so Claude Code (and any other MCP client reading it) can
+ * reach the GroundTrace tools.
+ */
+export function writeMcpConfig(cwd: string): { path: string; written: boolean } {
+  const path = join(cwd, MCP_CONFIG_FILENAME);
+
+  let existing: McpConfig | undefined;
+  if (existsSync(path)) {
+    try {
+      existing = JSON.parse(readFileSync(path, "utf-8")) as McpConfig;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`${path} is not valid JSON, refusing to overwrite it: ${message}`, {
+        cause: error,
+      });
+    }
+  }
+
+  const merged = mergeMcpServer(existing);
+  if (JSON.stringify(merged) === JSON.stringify(existing)) {
+    return { path, written: false };
+  }
+
+  writeFileSync(path, `${JSON.stringify(merged, null, 2)}\n`, "utf-8");
+  return { path, written: true };
+}
+
 function print(cwd: string, result: InitResult, configExisted: boolean): void {
   const where = (path: string) => relative(cwd, path) || path;
 
@@ -132,6 +177,14 @@ function print(cwd: string, result: InitResult, configExisted: boolean): void {
       result.settingsWritten === true
         ? tick(`added the Stop hook to ${where(result.settingsPath)}`)
         : `${paint("·", "gray")} ${where(result.settingsPath)} already has the Stop hook`,
+    );
+  }
+
+  if (result.mcpPath !== undefined) {
+    console.log(
+      result.mcpWritten === true
+        ? tick(`registered the MCP server in ${where(result.mcpPath)}`)
+        : `${paint("·", "gray")} ${where(result.mcpPath)} already registers it`,
     );
   }
 

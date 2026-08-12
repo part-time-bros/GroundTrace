@@ -9,9 +9,15 @@ export {
   type GroundTraceConfig,
 } from "./config.js";
 export {
+  DEFAULT_MCP_ENTRY,
   HOOK_COMMAND,
+  MCP_CONFIG_FILENAME,
+  MCP_SERVER_NAME,
   alreadyPresent,
+  mergeMcpServer,
   mergeStopHook,
+  type McpConfig,
+  type McpServerEntry,
   type ClaudeSettings,
   type HookEntry,
   type HookMatcher,
@@ -54,6 +60,7 @@ export {
   detectConfig,
   runInit,
   writeClaudeHook,
+  writeMcpConfig,
   type InitOptions,
   type InitResult,
 } from "./commands/init.js";

@@ -70,3 +70,47 @@ export function alreadyPresent(stop: HookMatcher[], command: string): boolean {
     (matcher.hooks ?? []).some((hook) => hook.command === command),
   );
 }
+
+// ---------------------------------------------------------------------------
+// MCP registration (V2_SPEC §11)
+// ---------------------------------------------------------------------------
+
+export const MCP_SERVER_NAME = "groundtrace";
+export const MCP_CONFIG_FILENAME = ".mcp.json";
+
+export interface McpServerEntry {
+  command: string;
+  args?: string[];
+  env?: Record<string, string>;
+  [key: string]: unknown;
+}
+
+export interface McpConfig {
+  mcpServers?: Record<string, McpServerEntry>;
+  [key: string]: unknown;
+}
+
+export const DEFAULT_MCP_ENTRY: McpServerEntry = {
+  command: "npx",
+  args: ["-y", "@groundtrace/mcp"],
+};
+
+/**
+ * Registers the MCP server in a project's `.mcp.json`, leaving every other
+ * server alone. Same rule as the Stop hook: this writes into a file the user
+ * owns, so it must never clobber entries it didn't add.
+ */
+export function mergeMcpServer(
+  config: McpConfig | undefined,
+  entry: McpServerEntry = DEFAULT_MCP_ENTRY,
+  name: string = MCP_SERVER_NAME,
+): McpConfig {
+  const base: McpConfig = config === undefined ? {} : { ...config };
+  const servers = { ...(base.mcpServers ?? {}) };
+
+  // An existing entry under our name is left as-is: the user may have pointed
+  // it at a local build or added env of their own.
+  servers[name] ??= entry;
+
+  return { ...base, mcpServers: servers };
+}

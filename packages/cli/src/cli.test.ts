@@ -9,7 +9,15 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { HOOK_COMMAND, mergeStopHook, type ClaudeSettings } from "./claude-hook.js";
+import {
+  DEFAULT_MCP_ENTRY,
+  HOOK_COMMAND,
+  MCP_CONFIG_FILENAME,
+  mergeMcpServer,
+  mergeStopHook,
+  type ClaudeSettings,
+  type McpConfig,
+} from "./claude-hook.js";
 import { CONFIG_FILENAME, DEFAULT_CONFIG, loadConfig, saveConfig } from "./config.js";
 import { extractFallbackLiterals, extractIds, scanProject } from "./scan.js";
 import {
@@ -17,6 +25,7 @@ import {
   detectConfig,
   runInit,
   writeClaudeHook,
+  writeMcpConfig,
 } from "./commands/init.js";
 import { injectOverlayTag, startCollectorServer, OVERLAY_PATH } from "./server.js";
 import { loadVerifyResult, saveVerifyResult } from "./report-store.js";
@@ -429,5 +438,55 @@ describe("verifyExitCode", () => {
       idsFromSource: 0,
     };
     expect(verifyExitCode(result)).toBe(0);
+  });
+});
+
+// --- §11 MCP registration --------------------------------------------------
+
+describe("mergeMcpServer", () => {
+  it("creates the config from nothing", () => {
+    const merged = mergeMcpServer(undefined);
+    expect(merged.mcpServers?.["groundtrace"]).toEqual(DEFAULT_MCP_ENTRY);
+  });
+
+  it("leaves other servers completely alone", () => {
+    const existing: McpConfig = {
+      mcpServers: { linear: { command: "npx", args: ["-y", "linear-mcp"] } },
+    };
+    const merged = mergeMcpServer(existing);
+    expect(merged.mcpServers?.["linear"]).toEqual(existing.mcpServers?.["linear"]);
+    expect(merged.mcpServers?.["groundtrace"]).toBeDefined();
+  });
+
+  it("does not overwrite an entry the user has customised", () => {
+    const custom: McpConfig = {
+      mcpServers: { groundtrace: { command: "node", args: ["./local/build.js"] } },
+    };
+    expect(mergeMcpServer(custom).mcpServers?.["groundtrace"]?.command).toBe("node");
+  });
+});
+
+describe("writeMcpConfig", () => {
+  it("writes valid JSON when nothing exists", () => {
+    const { path, written } = writeMcpConfig(dir);
+    expect(written).toBe(true);
+    const parsed = JSON.parse(readFileSync(path, "utf-8")) as McpConfig;
+    expect(parsed.mcpServers?.["groundtrace"]?.command).toBe("npx");
+  });
+
+  it("is a no-op the second time", () => {
+    writeMcpConfig(dir);
+    expect(writeMcpConfig(dir).written).toBe(false);
+  });
+
+  it("refuses to overwrite a file it cannot parse", () => {
+    writeFileSync(join(dir, MCP_CONFIG_FILENAME), "{ broken");
+    expect(() => writeMcpConfig(dir)).toThrow("refusing to overwrite");
+  });
+
+  it("is wired to init --mcp", () => {
+    const result = runInit({ cwd: dir, quiet: true, mcp: true });
+    expect(result.mcpWritten).toBe(true);
+    expect(existsSync(join(dir, MCP_CONFIG_FILENAME))).toBe(true);
   });
 });

@@ -1,0 +1,36 @@
+{
+  "name": "@groundtrace/mcp",
+  "version": "0.1.0",
+  "description": "GroundTrace as MCP tools — let an agent check whether the numbers it just wired up are real.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "groundtrace-mcp": "./dist/bin.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@groundtrace/core": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "groundtrace": "workspace:*",
+    "zod": "^4.4.3"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
