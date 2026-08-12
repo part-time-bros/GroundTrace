@@ -24,6 +24,14 @@ export interface GroundTraceConfig {
   routes: string[];
   /** Directories scanned for tracked value ids and fallback literals. */
   scan: string[];
+  /**
+   * CSS selectors to click before reading each page.
+   *
+   * Values behind a tab, an accordion, or a "load more" button are invisible to
+   * a scan that only navigates — which means `verify` would report a page as
+   * fully verified while never having seen half of it.
+   */
+  interactions?: string[];
 }
 
 export const DEFAULT_CONFIG: GroundTraceConfig = {
@@ -34,6 +42,7 @@ export const DEFAULT_CONFIG: GroundTraceConfig = {
   test: "vitest run",
   routes: ["/"],
   scan: ["app", "src", "components", "pages", "lib"],
+  interactions: [],
 };
 
 export function configPath(cwd: string): string {

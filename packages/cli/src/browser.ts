@@ -21,6 +21,7 @@ const require_ = createRequire(import.meta.url);
 /** The slice of Playwright's surface we actually use. */
 interface BrowserPage {
   goto(url: string, options?: { waitUntil?: string; timeout?: number }): Promise<unknown>;
+  click(selector: string, options?: { timeout?: number }): Promise<unknown>;
   waitForFunction(
     fn: string,
     arg?: unknown,
@@ -47,6 +48,8 @@ export interface BrowserScanOptions {
   /** Base URL to visit — the collector's proxy, so the SDK reports land locally. */
   url: string;
   routes: string[];
+  /** CSS selectors clicked on every page before reading it. */
+  interactions?: string[];
   /** Explicit browser binary. Falls back to `GROUNDTRACE_BROWSER_PATH`, then discovery. */
   browserPath?: string;
   timeoutMs?: number;
@@ -59,6 +62,8 @@ export interface BrowserScanResult {
   routesVisited: number;
   /** Every `[data-truth-id]` found in the DOM, including ones nothing reported. */
   domIds: string[];
+  /** Interaction selectors that actually fired. */
+  interactionsRun: number;
 }
 
 /** Resolves Playwright without depending on it. */
@@ -151,6 +156,7 @@ export async function scanInBrowser(
       reason: "playwright is not installed — install it for a real-DOM scan",
       routesVisited: 0,
       domIds: [],
+      interactionsRun: 0,
     };
   }
 
@@ -167,11 +173,13 @@ export async function scanInBrowser(
       reason: `could not launch a browser: ${message}`,
       routesVisited: 0,
       domIds: [],
+      interactionsRun: 0,
     };
   }
 
   const domIds = new Set<string>();
   let routesVisited = 0;
+  let interactionsRun = 0;
 
   try {
     for (const route of options.routes) {
@@ -196,6 +204,17 @@ export async function scanInBrowser(
         }
         await page.waitForTimeout(250);
 
+        // Reveal anything behind a tab or a toggle before reading the page.
+        for (const selector of options.interactions ?? []) {
+          try {
+            await page.click(selector, { timeout: 2_000 });
+            interactionsRun += 1;
+            await page.waitForTimeout(400);
+          } catch {
+            // A selector that isn't on this route is not an error.
+          }
+        }
+
         const ids = await page.evaluate<string[]>(
           "Array.from(document.querySelectorAll('[data-truth-id]')).map((el) => el.getAttribute('data-truth-id')).filter(Boolean)",
         );
@@ -211,5 +230,5 @@ export async function scanInBrowser(
     await browser.close().catch(() => undefined);
   }
 
-  return { ran: true, routesVisited, domIds: [...domIds].sort() };
+  return { ran: true, routesVisited, interactionsRun, domIds: [...domIds].sort() };
 }

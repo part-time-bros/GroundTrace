@@ -181,6 +181,70 @@ describe("zero-config tagging", () => {
     );
   });
 
+  it("matches a percentage on screen back to the ratio at the source", async () => {
+    // The single most common dashboard transform: source returns 0.248, the page
+    // renders "+24.8%". Without undoing it, the most-formatted value never matches.
+    const ratio: ServerTrace[] = [
+      {
+        traceId: "gt_pct",
+        startedAt: 1,
+        events: [
+          {
+            sourceId: "growth-calc",
+            status: "VERIFIED",
+            timestamp: 2,
+            produces: ["growth"],
+            values: { growth: 0.248 },
+          },
+        ],
+      },
+    ];
+
+    document.body.innerHTML = `<span>+24.8%</span>`;
+    const reported = await tag(ratio);
+    expect(reported[0]?.id).toBe("growth");
+    expect(document.querySelector("[data-truth-id]")?.getAttribute("data-truth-id")).toBe(
+      "growth",
+    );
+  });
+
+  it("does not undo a percentage for text that carries no percent sign", async () => {
+    const ratio: ServerTrace[] = [
+      {
+        traceId: "gt_pct2",
+        startedAt: 1,
+        events: [
+          {
+            sourceId: "q",
+            status: "VERIFIED",
+            timestamp: 2,
+            produces: ["growth"],
+            values: { growth: 0.248 },
+          },
+        ],
+      },
+    ];
+    document.body.innerHTML = `<span>24.8</span>`;
+    expect(await tag(ratio)).toEqual([]);
+  });
+
+  it("scan() reports the page, not just the delta", async () => {
+    renderPlainDashboard("$96,159");
+    handle = startAutoTagging({
+      document,
+      intervalMs: 1_000_000,
+      fetchSnapshot: async () => ({ traces: HEALTHY }),
+      report: () => undefined,
+    });
+
+    const first = await handle.scan();
+    const second = await handle.scan();
+    // Nothing changed between them, so nothing is re-reported — but both scans
+    // still describe the two values that are on the page.
+    expect(first.map((event) => event.id).sort()).toEqual(["customers", "revenue"]);
+    expect(second.map((event) => event.id).sort()).toEqual(["customers", "revenue"]);
+  });
+
   it("tags only the first element repeating a number, not every one", async () => {
     document.body.innerHTML = `<span>$96,159</span><span>$96,159</span>`;
     await tag(HEALTHY);

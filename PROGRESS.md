@@ -52,6 +52,20 @@ Nothing. Two issues were hit and resolved rather than parked:
 
 Producing the screenshots surfaced and fixed a real cold-start race: on a fresh dev server the collector route takes ~1s to compile, so the first click queried before the first client report landed and the overlay showed `UNTRACED`. The overlay now waits on the SDK's in-flight reports — which in turn required `defaultTransport` to return its request promise instead of firing it with `void fetch(...)`. Covered by a regression test.
 
+## Completion pass
+
+- [x] Truthful install docs + real CI — **DONE**
+- [x] React Server Component support (`traceServerRender`, demo `/server`) — **DONE**
+- [x] `@groundtrace/auto` validated against real markup — **DONE**
+- [x] Overlay all-values summary (Alt+G) — **DONE**
+- [x] Inline-literal SYNTHETIC detection — **DONE**
+- [x] Interaction-aware `verify` — **DONE**
+- [x] Multi-service trace propagation, demonstrated — **DONE**
+- [x] Repo presentation: social preview, community health files, badges — **DONE**
+
+311 tests. Two defects found by validating `auto` against the real demo rather than jsdom
+fixtures: percentages never matched their source ratio, and `scan()` returned only the delta.
+
 ### V2 log
 
 - **Phase 10 — Real DOM scan.** `verify` loads each route in a real browser (Playwright resolved at runtime, never a dependency) so the app's own SDK reports the values it rendered. Closes V1's one structural weakness: it can now *prove* a displayed number matches its source instead of verifying the server side and marking the value unobserved. The report states which basis it used. Acceptance: healthy demo → "matches what it returned" with `(rendered in a browser)`; `--no-browser` → the weaker basis, stated plainly; failure state → FALLBACK, 0%, under both.

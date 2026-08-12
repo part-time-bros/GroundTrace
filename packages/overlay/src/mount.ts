@@ -6,9 +6,13 @@
  * gets injected into arbitrary apps, and it must neither inherit their CSS nor
  * leak its own into theirs.
  */
-import { COLLECTOR_BASE, type ValueProvenance } from "@groundtrace/core";
+import {
+  COLLECTOR_BASE,
+  type ProvenanceReport,
+  type ValueProvenance,
+} from "@groundtrace/core";
 import { resolveComponentName } from "./component.js";
-import { buildErrorPanel, buildPanel } from "./panel.js";
+import { buildErrorPanel, buildPanel, buildSummaryPanel } from "./panel.js";
 import { HOST_STYLES, PANEL_STYLES } from "./styles.js";
 
 export const TRUTH_ATTRIBUTE = "data-truth-id";
@@ -20,18 +24,24 @@ export interface OverlayOptions {
   document?: Document;
   /** Swappable fetcher, so tests don't need a network. */
   fetchProvenance?: (id: string) => Promise<ValueProvenance>;
+  /** Swappable report fetcher for the all-values summary. */
+  fetchReport?: () => Promise<ProvenanceReport>;
   /** Make tagged values keyboard-reachable. Defaults to true. */
   enhanceFocus?: boolean;
 }
 
 export interface OverlayHandle {
   open(id: string, trigger?: Element): Promise<void>;
+  /** Shows every tracked value on the page at once. */
+  openSummary(): Promise<void>;
   close(): void;
   destroy(): void;
   readonly openId: string | undefined;
 }
 
 const HOST_ID = "groundtrace-overlay-host";
+/** Sentinel `openId` for the all-values view, which belongs to no single value. */
+const SUMMARY_ID = "__groundtrace_summary__";
 
 /**
  * Where the live handle is parked so a second mount can retire the first.
@@ -52,6 +62,7 @@ export function mountOverlay(options: OverlayOptions = {}): OverlayHandle {
   }
 
   const fetchProvenance = options.fetchProvenance ?? makeFetcher(options.endpoint);
+  const fetchReport = options.fetchReport ?? makeReportFetcher(options.endpoint);
 
   // --- host + shadow root -------------------------------------------------
   const view = doc.defaultView as WindowWithHandle | null;
@@ -80,6 +91,7 @@ export function mountOverlay(options: OverlayOptions = {}): OverlayHandle {
     style.textContent = PANEL_STYLES;
     shadow.replaceChildren(style, handles.root);
     handles.closeButton.addEventListener("click", close);
+    handles.allButton?.addEventListener("click", () => void openSummary());
     handles.panel.focus();
   }
 
@@ -97,6 +109,21 @@ export function mountOverlay(options: OverlayOptions = {}): OverlayHandle {
       if (mine !== generation) return;
       const message = error instanceof Error ? error.message : String(error);
       render(buildErrorPanel(doc, `could not load provenance for "${id}": ${message}`));
+    }
+  }
+
+  async function openSummary(): Promise<void> {
+    const mine = ++generation;
+    openId = SUMMARY_ID;
+
+    try {
+      const report = await fetchReport();
+      if (mine !== generation) return;
+      render(buildSummaryPanel(doc, report));
+    } catch (error) {
+      if (mine !== generation) return;
+      const message = error instanceof Error ? error.message : String(error);
+      render(buildErrorPanel(doc, `could not load the provenance report: ${message}`));
     }
   }
 
@@ -137,6 +164,13 @@ export function mountOverlay(options: OverlayOptions = {}): OverlayHandle {
       return;
     }
 
+    // Alt+G opens the whole-page summary without needing a value to click first.
+    if (event.altKey && (event.key === "g" || event.key === "G")) {
+      event.preventDefault();
+      void openSummary();
+      return;
+    }
+
     if (event.key !== "Enter" && event.key !== " ") return;
     const element = targetFor(event);
     if (element === undefined) return;
@@ -153,6 +187,7 @@ export function mountOverlay(options: OverlayOptions = {}): OverlayHandle {
 
   const handle: OverlayHandle = {
     open,
+    openSummary,
     close,
     destroy() {
       doc.removeEventListener("click", onClick, true);
@@ -232,6 +267,18 @@ async function awaitPendingReports(): Promise<void> {
   } catch {
     // The handshake is an optimisation; never let it block opening the panel.
   }
+}
+
+function makeReportFetcher(endpoint: string | undefined) {
+  return async (): Promise<ProvenanceReport> => {
+    await awaitPendingReports();
+    const base = endpoint ?? globalThis.location?.origin ?? "http://localhost";
+    const response = await fetch(new URL(`${COLLECTOR_BASE}/report`, base), {
+      cache: "no-store",
+    });
+    if (!response.ok) throw new Error(`collector responded ${response.status}`);
+    return (await response.json()) as ProvenanceReport;
+  };
 }
 
 function makeFetcher(endpoint: string | undefined) {

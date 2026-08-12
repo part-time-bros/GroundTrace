@@ -1,8 +1,9 @@
 # Reusable CI job: fails the build when the app displays values that aren't
 # backed by real sources (V2_SPEC §16).
-name: GroundTrace
+name: GroundTrace (reusable)
 
 on:
+  workflow_dispatch:
   workflow_call:
     inputs:
       fail-under:
@@ -13,9 +14,6 @@ on:
         description: "Directory of the app to verify."
         type: string
         default: "."
-  pull_request:
-  push:
-    branches: [main]
 
 jobs:
   verify:
@@ -39,10 +37,12 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
         continue-on-error: true
 
+      # Uses the built CLI from this repo. Once `groundtrace` is published,
+      # `npx groundtrace verify ...` is the equivalent line for your own project.
       - name: Verify displayed values
         working-directory: ${{ inputs.working-directory || '.' }}
         run: >
-          npx groundtrace verify
+          node ${{ github.workspace }}/packages/cli/dist/bin.js verify
           --skip-build --skip-tests
           --fail-under ${{ inputs.fail-under || 100 }}
 

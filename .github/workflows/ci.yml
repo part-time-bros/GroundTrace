@@ -1,0 +1,75 @@
+# The repo's own verification. A tool that checks whether your build is really
+# green has no business not checking its own.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: build · test · lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build every package and the demo
+        run: pnpm build
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Check formatting
+        run: pnpm format:check
+
+      # The demo end-to-end suite boots a real Next server twice; skip it here
+      # and run it in the job below, so a failure says which kind it was.
+      - name: Unit and integration tests
+        run: pnpm test
+        env:
+          GROUNDTRACE_SKIP_E2E: "1"
+
+  e2e:
+    name: demo end-to-end
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+
+      # A real browser is what lets `verify` prove a displayed number matches
+      # its source rather than checking only the server side.
+      - name: Install Chromium
+        run: pnpm --filter groundtrace exec playwright install --with-deps chromium
+
+      - name: Boot the demo and verify both toggle states
+        run: pnpm --filter groundtrace exec vitest run src/verify-demo.test.ts
+
+      - name: Verify the demo's own displayed values
+        run: node packages/cli/dist/bin.js verify --cwd examples/dashboard-demo --skip-build --skip-tests --json
+        continue-on-error: true

@@ -27,6 +27,16 @@ export interface ScanResult {
   fallbackLiterals: number[];
 }
 
+/**
+ * Numbers big enough to be data rather than layout.
+ *
+ * Inline literals are a much noisier signal than a `DEMO_FALLBACK` constant, so
+ * the bar is higher: four or more digits, no decimal point, not a year. That
+ * still catches the shape that matters — a placeholder total someone typed into
+ * JSX and never replaced — while ignoring `flex: 1`, `z-index: 1000`, and 2026.
+ */
+const INLINE_MIN_DIGITS = 4;
+
 const DATA_TRUTH_ID = /data-truth-id\s*=\s*["'{]?\s*["']([\w:.-]+)["']/g;
 const TRUTH_META_ID = /\bid\s*:\s*["']([\w:.-]+)["']/g;
 const TRUTH_CALL = /\buseTruthValue\s*\(|<Truth\b/;
@@ -55,6 +65,7 @@ export function scanProject(cwd: string, dirs: string[]): ScanResult {
 
       for (const id of extractIds(source)) ids.add(id);
       for (const literal of extractFallbackLiterals(source)) literals.add(literal);
+      for (const literal of extractInlineLiterals(source)) literals.add(literal);
     }
   }
 
@@ -96,6 +107,39 @@ export function extractFallbackLiterals(source: string): number[] {
   }
 
   return literals;
+}
+
+/**
+ * Large bare numbers written straight into JSX.
+ *
+ * The constant-name heuristic above misses the laziest placeholder of all —
+ * `<div className="figure">184293</div>` — which is exactly the kind of thing
+ * that survives to production because nothing ever queried anything.
+ */
+export function extractInlineLiterals(source: string): number[] {
+  const literals: number[] = [];
+
+  // Between a `>` and a `<`, i.e. JSX text content, or inside a `{...}` expression
+  // that is nothing but a number.
+  for (const match of source.matchAll(/>\s*(-?\d[\d_]*)\s*</g)) {
+    pushIfDataLike(literals, match[1]);
+  }
+  for (const match of source.matchAll(/\{\s*(-?\d[\d_]*(?:\.\d+)?)\s*\}/g)) {
+    pushIfDataLike(literals, match[1]);
+  }
+
+  return literals;
+}
+
+function pushIfDataLike(into: number[], raw: string | undefined): void {
+  if (raw === undefined) return;
+  const digits = raw.replace(/[^\d]/g, "");
+  if (digits.length < INLINE_MIN_DIGITS) return;
+  // Years read as data by digit count but essentially never are.
+  const value = Number(raw.replaceAll("_", ""));
+  if (!Number.isFinite(value)) return;
+  if (Number.isInteger(value) && value >= 1_900 && value <= 2_100) return;
+  into.push(value);
 }
 
 function* walk(dir: string): Generator<string> {

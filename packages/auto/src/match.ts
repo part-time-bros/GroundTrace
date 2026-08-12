@@ -120,11 +120,31 @@ export function matchDisplayedValue(
   const parsed = parseDisplayedNumber(text);
   if (parsed === undefined) return undefined;
 
-  const entries = index.get(String(parsed));
-  if (entries === undefined || entries.length === 0) return undefined;
+  for (const candidate of candidateValues(text, parsed)) {
+    const entries = index.get(String(candidate));
+    if (entries === undefined || entries.length === 0) continue;
 
-  const distinctIds = new Set(entries.map((entry) => entry.id));
-  const failed = entries.find((entry) => entry.failed);
+    const distinctIds = new Set(entries.map((entry) => entry.id));
+    const failed = entries.find((entry) => entry.failed);
+    return { match: failed ?? entries[0]!, candidates: distinctIds.size };
+  }
 
-  return { match: failed ?? entries[0]!, candidates: distinctIds.size };
+  return undefined;
+}
+
+/**
+ * The values a piece of displayed text could correspond to at the source.
+ *
+ * Percentages are the one transform common enough to be worth undoing: a source
+ * that returns the ratio `0.248` is routinely rendered as `24.8%`, and without
+ * this the most-formatted value on a dashboard is the one that never matches.
+ * Gated on the text actually carrying a `%` — applied unconditionally it would
+ * invent matches rather than find them.
+ */
+function candidateValues(text: string, parsed: number): number[] {
+  if (!text.includes("%")) return [parsed];
+  // `24.8 / 100` is 0.24800000000000003 in binary floating point, which would
+  // never equal a recorded `0.248`.
+  const ratio = Number((parsed / 100).toPrecision(12));
+  return [parsed, ratio];
 }

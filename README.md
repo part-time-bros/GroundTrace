@@ -2,8 +2,10 @@
 
 **Click a number on your page and see exactly where it came from — including when it quietly came from a `catch` block instead of your API.**
 
+[![CI](https://github.com/part-time-bros/GroundTrace/actions/workflows/ci.yml/badge.svg)](https://github.com/part-time-bros/GroundTrace/actions/workflows/ci.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![node: >=22.6](https://img.shields.io/badge/node-%3E%3D22.6-brightgreen.svg)](package.json)
+[![tests: 294](https://img.shields.io/badge/tests-311%20passing-brightgreen.svg)](#development)
 
 ---
 
@@ -62,10 +64,6 @@ passthrough was *proven* against a recorded source value or merely assumed.
 GroundTrace ships as MCP tools, so an agent can check its own work *before* it says
 "Done ✅" rather than leaving you to find out later:
 
-```bash
-npx groundtrace init --mcp
-```
-
 | Tool | Does |
 |---|---|
 | `verify_app` | Builds, tests, and traces the app; returns the confidence report |
@@ -85,38 +83,44 @@ sources.
 
 ## Install
 
-```bash
-npx groundtrace init
-```
-
-That writes `groundtrace.config.json`, detecting your project's own dev/build/test scripts.
-Add the SDKs you need:
-
-```bash
-npm install @groundtrace/node @groundtrace/react @groundtrace/overlay
-```
-
-To have Claude Code print a confidence report every time it finishes a task:
+> [!IMPORTANT]
+> **Not published to npm yet.** `groundtrace` and the `@groundtrace/*` scope are unregistered,
+> so `npx groundtrace` and `npm install @groundtrace/node` will not work today. Use it from a
+> clone — every command below works that way, and the quickstart is built around it. The npm
+> instructions land with the first release.
 
 ```bash
-npx groundtrace init --claude-code-hook
+git clone https://github.com/part-time-bros/GroundTrace
+cd GroundTrace
+pnpm install
+pnpm build
 ```
 
-That merges a `Stop` hook into `.claude/settings.json`, leaving any hooks you already have
-untouched. It is informational only — it never blocks Claude's turn.
+That gives you a working `node packages/cli/dist/bin.js` — referred to below as
+`groundtrace`. To use the SDKs in another project on the same machine, link them:
+
+```bash
+pnpm --dir /path/to/your-app link /path/to/GroundTrace/packages/node
+pnpm --dir /path/to/your-app link /path/to/GroundTrace/packages/react
+```
+
+Then scaffold config into it:
+
+```bash
+node /path/to/GroundTrace/packages/cli/dist/bin.js init --mcp --claude-code-hook
+```
+
+`--mcp` registers the MCP server in `.mcp.json`; `--claude-code-hook` adds a `Stop` hook that
+prints a confidence report when Claude finishes a task. Both merge into existing files
+without touching anything they didn't add.
 
 ---
 
 ## Two-minute quickstart
 
-Against the bundled demo, from a fresh clone:
+From the clone above:
 
 ```bash
-git clone https://github.com/part-time-bros/groundtrace
-cd groundtrace
-pnpm install
-pnpm build
-
 cd examples/dashboard-demo
 pnpm dev            # http://localhost:3000
 ```
@@ -127,12 +131,16 @@ Then:
 2. Untick **Simulate API failure**. The figure changes to **$96,159**.
 3. Click it again → 🟢 `VERIFIED`, ending at the real SQL query.
 4. Click **+18.1%** → 🟡 `INDIRECT`, because it went through `toPercent()`.
-5. Press <kbd>Esc</kbd> to close.
+5. Press <kbd>Alt</kbd>+<kbd>G</kbd> for every tracked value on the page at once.
+6. Press <kbd>Esc</kbd> to close.
+
+Then open [http://localhost:3000/server](http://localhost:3000/server) — same dashboard, no API
+route, queried inside a server component. The trace works the same.
 
 From the terminal, without a browser:
 
 ```bash
-npx groundtrace verify --cwd examples/dashboard-demo --skip-build --skip-tests
+node packages/cli/dist/bin.js verify --cwd examples/dashboard-demo --skip-build --skip-tests
 ```
 
 ```
@@ -184,7 +192,7 @@ return <span data-truth-id="revenue">{formatCurrency(revenue)}</span>;
 **3. Run it** — app, correlation server, and overlay from one command:
 
 ```bash
-npx groundtrace run
+node /path/to/GroundTrace/packages/cli/dist/bin.js run
 ```
 
 ### Commands
@@ -206,10 +214,15 @@ so, rather than printing a confidence figure it cannot back.
 
 | | |
 |---|---|
+| **Server Components** | `traceServerRender` — for pages that query the database during render, with no API route at all |
 | **Express / Fastify** | `app.use(groundtraceMiddleware())` · `app.register(groundtraceFastify)` |
 | **Postgres** | `instrumentedQueryAsync` / `instrumentedGetAsync`, same shape as the SQLite pair |
 | **Vue** | `@groundtrace/vue` — same events, same overlay, same CLI |
+| **Multiple services** | `tracedFetch` propagates the trace id, so a call chain lands in one trace |
 | **No instrumentation at all** | `@groundtrace/auto` matches displayed numbers against traced sources and tags them for you |
+
+The demo ships both shapes: `/` fetches an API route from the client, `/server` queries SQLite
+directly inside a server component. Clicking a number behaves identically on either.
 
 ### Production
 
@@ -274,7 +287,7 @@ mode, no hosted dashboard, and no accounts — see the non-goals in
 ```bash
 pnpm install
 pnpm build
-pnpm test        # 294 tests
+pnpm test        # 311 tests
 pnpm lint
 ```
 
@@ -285,6 +298,17 @@ Set `GROUNDTRACE_SKIP_E2E=1` to skip the slow demo run.
 The build is specified in [`docs/BUILD_SPEC.md`](docs/BUILD_SPEC.md) (V1) and
 [`docs/V2_SPEC.md`](docs/V2_SPEC.md) (V2); every judgement call made along the way is logged
 in [`DECISIONS.md`](DECISIONS.md).
+
+## Contributing
+
+Issues and PRs welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). It has one rule that matters
+more than the rest: **don't claim what you haven't verified.** Both bugs the adapter work
+caught were shape mismatches a mock would have confirmed happily, so tests here run against
+real servers and real renderers wherever that's possible.
+
+- [Code of Conduct](CODE_OF_CONDUCT.md)
+- [Security policy](SECURITY.md) — including what GroundTrace records and when
+- [`DECISIONS.md`](DECISIONS.md) — every judgement call, and why
 
 ## License
 

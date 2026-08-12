@@ -19,7 +19,12 @@ import {
   type McpConfig,
 } from "./claude-hook.js";
 import { CONFIG_FILENAME, DEFAULT_CONFIG, loadConfig, saveConfig } from "./config.js";
-import { extractFallbackLiterals, extractIds, scanProject } from "./scan.js";
+import {
+  extractFallbackLiterals,
+  extractIds,
+  extractInlineLiterals,
+  scanProject,
+} from "./scan.js";
 import {
   CLAUDE_SETTINGS_PATH,
   detectConfig,
@@ -566,5 +571,30 @@ describe("toHookPayload", () => {
   it("is valid JSON, since Claude Code reads it off stdout", () => {
     const payload = toHookPayload(sampleResult(0), 100);
     expect(() => JSON.parse(JSON.stringify(payload))).not.toThrow();
+  });
+});
+
+describe("extractInlineLiterals", () => {
+  it("catches a placeholder total typed straight into JSX", () => {
+    expect(extractInlineLiterals(`<div className="figure">184293</div>`)).toEqual([
+      184293,
+    ]);
+    expect(extractInlineLiterals(`<span>{96159}</span>`)).toEqual([96159]);
+  });
+
+  it("ignores numbers too small to be data", () => {
+    expect(extractInlineLiterals(`<div style={{ flex: 1 }}>0</div>`)).toEqual([]);
+    expect(extractInlineLiterals(`<span>{42}</span>`)).toEqual([]);
+  });
+
+  it("ignores years, which read as data by digit count but never are", () => {
+    expect(extractInlineLiterals(`<footer>2026</footer>`)).toEqual([]);
+    expect(extractInlineLiterals(`<footer>1999</footer>`)).toEqual([]);
+  });
+
+  it("feeds the SYNTHETIC classification through a project scan", () => {
+    mkdirSync(join(dir, "app"), { recursive: true });
+    writeFileSync(join(dir, "app", "page.tsx"), `<div className="figure">184293</div>`);
+    expect(scanProject(dir, ["app"]).fallbackLiterals).toContain(184293);
   });
 });

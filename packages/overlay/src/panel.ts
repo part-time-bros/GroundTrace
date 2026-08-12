@@ -8,6 +8,7 @@ import {
   STATUS_LIGHT,
   flattenTree,
   formatValue,
+  type ProvenanceReport,
   type ProvenanceStatus,
   type ValueProvenance,
 } from "@groundtrace/core";
@@ -17,6 +18,8 @@ export interface PanelHandles {
   root: HTMLElement;
   panel: HTMLElement;
   closeButton: HTMLButtonElement;
+  /** Present on the single-value panel: opens the all-values summary. */
+  allButton?: HTMLButtonElement;
 }
 
 function el<K extends keyof HTMLElementTagNameMap>(
@@ -125,6 +128,96 @@ export function buildPanel(doc: Document, value: ValueProvenance): PanelHandles 
   footer.append(meta);
   panel.append(footer);
 
+  const hint = el(doc, "div", "hint");
+  hint.append(doc.createTextNode("click any underlined value · "));
+  const allButton = el(doc, "button", "linkish", "show all values");
+  allButton.type = "button";
+  hint.append(allButton, doc.createTextNode(" · esc to close"));
+  panel.append(hint);
+
+  backdrop.append(panel);
+  return { root: backdrop, panel, closeButton, allButton };
+}
+
+/**
+ * Every tracked value on the page at once.
+ *
+ * Clicking one value answers "where did *this* come from"; this answers "is
+ * anything on this page not real", which is the question you actually have
+ * before you know which number to suspect.
+ */
+export function buildSummaryPanel(doc: Document, report: ProvenanceReport): PanelHandles {
+  const backdrop = el(doc, "div", "backdrop");
+  const panel = el(doc, "section", "panel");
+  panel.setAttribute("role", "dialog");
+  panel.setAttribute("aria-label", "GroundTrace — all tracked values");
+  panel.tabIndex = -1;
+
+  const titlebar = el(doc, "header", "titlebar");
+  titlebar.append(el(doc, "span", "title", "GROUNDTRACE"));
+  const titleRight = el(doc, "span");
+  titleRight.append(el(doc, "span", "badge", "DEV MODE — not for production"));
+  const closeButton = el(doc, "button", "close", "esc");
+  closeButton.type = "button";
+  closeButton.setAttribute("aria-label", "Close GroundTrace overlay");
+  titleRight.append(" ", closeButton);
+  titlebar.append(titleRight);
+  panel.append(titlebar);
+
+  const headline = el(doc, "div", "headline");
+  headline.append(
+    el(
+      doc,
+      "span",
+      "value",
+      `${report.tracked} tracked value${report.tracked === 1 ? "" : "s"}`,
+    ),
+  );
+
+  const confidence = el(
+    doc,
+    "span",
+    "status",
+    report.confidence === null
+      ? "— nothing tracked"
+      : `${Math.round(report.confidence * 100)}% confidence`,
+  );
+  confidence.style.color =
+    report.confidence === null
+      ? STATUS_COLORS.UNTRACED
+      : report.confidence === 1
+        ? STATUS_COLORS.VERIFIED
+        : report.confidence >= 0.5
+          ? STATUS_COLORS.INDIRECT
+          : STATUS_COLORS.FALLBACK;
+  headline.append(confidence);
+  panel.append(headline, el(doc, "hr", "rule"));
+
+  const list = el(doc, "pre", "tree");
+  if (report.values.length === 0) {
+    list.append(el(doc, "span", "detail", "Nothing has been reported yet.\n"));
+  }
+  for (const value of report.values) {
+    const row = el(doc, "span", "row");
+    const label = el(
+      doc,
+      "span",
+      "label",
+      `${STATUS_LIGHT[value.status]} ${value.id} = ${formatValue(value.value)}`,
+    );
+    label.style.color = statusColor(value.status);
+    row.append(label, doc.createTextNode("\n"));
+
+    const why = el(doc, "span", "row");
+    why.append(
+      el(doc, "span", "prefix", "    "),
+      el(doc, "span", "detail", value.reason),
+    );
+    why.append(doc.createTextNode("\n"));
+
+    list.append(row, why);
+  }
+  panel.append(list, el(doc, "hr", "rule"));
   panel.append(el(doc, "div", "hint", "click any underlined value · esc to close"));
 
   backdrop.append(panel);

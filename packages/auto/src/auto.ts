@@ -43,7 +43,13 @@ export interface AutoOptions {
 }
 
 export interface AutoHandle {
-  /** Runs one scan immediately and returns what it tagged. */
+  /**
+   * Scans once and returns every value currently matched on the page.
+   *
+   * The return value describes the page; only values whose reading *changed*
+   * are reported to the collector. Returning just the delta made a second scan
+   * look like it had found nothing, which was misleading.
+   */
   scan(): Promise<ClientNodeEvent[]>;
   stop(): void;
 }
@@ -90,7 +96,8 @@ export function startAutoTagging(options: AutoOptions = {}): AutoHandle {
     const index = indexSourceValues(traces);
     if (index.size === 0) return [];
 
-    const events: ClientNodeEvent[] = [];
+    const matched: ClientNodeEvent[] = [];
+    const changed: ClientNodeEvent[] = [];
     const seen = new Set<string>();
 
     for (const element of doc.querySelectorAll(selector)) {
@@ -115,22 +122,24 @@ export function startAutoTagging(options: AutoOptions = {}): AutoHandle {
       element.setAttribute(TRUTH_ATTRIBUTE, result.match.id);
       element.setAttribute(AUTO_ATTRIBUTE, "true");
 
+      const event = toEvent(result.match, result.candidates, element);
+      matched.push(event);
+
       const signature = `${valueKey(result.match.value) ?? ""}|${result.candidates}|${result.match.traceId}`;
       if (lastReported.get(result.match.id) === signature) continue;
       lastReported.set(result.match.id, signature);
-
-      events.push(toEvent(result.match, result.candidates, element));
+      changed.push(event);
     }
 
-    if (events.length > 0) {
+    if (changed.length > 0) {
       try {
-        await report(events);
+        await report(changed);
       } catch {
         // Reporting failures stay inside the tool, as everywhere else.
       }
     }
 
-    return events;
+    return matched;
   }
 
   void scan();

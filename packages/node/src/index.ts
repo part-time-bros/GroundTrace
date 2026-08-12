@@ -44,6 +44,12 @@ export {
   type TracedResponse,
 } from "./middleware.js";
 export {
+  traceIdFromNextHeaders,
+  traceServerRender,
+  type ServerRenderResult,
+  type TraceServerRenderOptions,
+} from "./rsc.js";
+export {
   instrumentedGetAsync,
   instrumentedQueryAsync,
   type AsyncQueryOptions,

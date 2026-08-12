@@ -25,6 +25,7 @@ export {
 export {
   extractFallbackLiterals,
   extractIds,
+  extractInlineLiterals,
   scanProject,
   type ScanResult,
 } from "./scan.js";

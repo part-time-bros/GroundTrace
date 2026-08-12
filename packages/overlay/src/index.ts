@@ -4,6 +4,12 @@ export {
   type OverlayHandle,
   type OverlayOptions,
 } from "./mount.js";
-export { buildErrorPanel, buildPanel, statusColor, type PanelHandles } from "./panel.js";
+export {
+  buildErrorPanel,
+  buildPanel,
+  buildSummaryPanel,
+  statusColor,
+  type PanelHandles,
+} from "./panel.js";
 export { resolveComponentName } from "./component.js";
 export { HOST_STYLES, PANEL_STYLES, STATUS_COLORS } from "./styles.js";

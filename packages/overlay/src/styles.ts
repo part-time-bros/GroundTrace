@@ -157,6 +157,21 @@ export const PANEL_STYLES = `
   font-size: 11px;
   padding: 0 12px 10px;
 }
+.linkish {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: #a1a1aa;
+  font: inherit;
+  font-size: 11px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.linkish:hover,
+.linkish:focus-visible {
+  color: #e4e4e7;
+}
 .error {
   padding: 12px;
   color: #f87171;

@@ -177,10 +177,19 @@ async function scanProvenance(
     // rendered, which is the only way to prove a displayed number matches its
     // source rather than assuming it.
     const browser = options.noBrowser
-      ? { ran: false, reason: "--no-browser", routesVisited: 0, domIds: [] }
+      ? {
+          ran: false,
+          reason: "--no-browser",
+          routesVisited: 0,
+          domIds: [],
+          interactionsRun: 0,
+        }
       : await scanInBrowser({
           url: collector.url,
           routes: config.routes,
+          ...(config.interactions !== undefined && config.interactions.length > 0
+            ? { interactions: config.interactions }
+            : {}),
           ...(options.browserPath !== undefined
             ? { browserPath: options.browserPath }
             : {}),
