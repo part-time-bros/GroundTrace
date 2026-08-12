@@ -219,7 +219,7 @@ mode, no hosted dashboard, and no accounts — see the non-goals in
 ```bash
 pnpm install
 pnpm build
-pnpm test        # 192 tests
+pnpm test        # 193 tests
 pnpm lint
 ```
 

@@ -9,6 +9,8 @@ import { spawn, type ChildProcess } from "node:child_process";
 
 export interface AppProcess {
   child: ChildProcess;
+  /** Tail of the app's own stdout+stderr, when it was captured. */
+  output(): string;
   stop(): Promise<void>;
 }
 
@@ -21,19 +23,37 @@ export interface StartAppOptions {
   inherit?: boolean;
 }
 
+const MAX_CAPTURED = 4_000;
+
 export function startApp(options: StartAppOptions): AppProcess {
+  const capture = options.inherit === false;
+
   const child = spawn(options.command, {
     shell: true,
     cwd: options.cwd,
     detached: true,
-    stdio: options.inherit === false ? "ignore" : "inherit",
+    // Captured rather than discarded: when the app fails to start, its own
+    // output is the only thing that explains why ("Another next dev server is
+    // already running", a port clash, a missing script), and swallowing it
+    // leaves the user with a bare "never became reachable".
+    stdio: capture ? ["ignore", "pipe", "pipe"] : "inherit",
     env: { ...process.env, ...options.env },
   });
+
+  let captured = "";
+  if (capture) {
+    const collect = (chunk: Buffer) => {
+      captured = (captured + chunk.toString("utf-8")).slice(-MAX_CAPTURED);
+    };
+    child.stdout?.on("data", collect);
+    child.stderr?.on("data", collect);
+  }
 
   let stopped = false;
 
   return {
     child,
+    output: () => captured,
     async stop() {
       if (stopped || child.pid === undefined || child.exitCode !== null) return;
       stopped = true;

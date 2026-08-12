@@ -143,7 +143,7 @@ async function scanProvenance(
     if (!reachable) {
       return {
         ran: false,
-        skipped: `the app never became reachable at ${appUrl}`,
+        skipped: `the app never became reachable at ${appUrl}${appStartupHint(app)}`,
         routesExercised: 0,
         idsFromSource: scan.trackedIds.length,
       };
@@ -181,6 +181,14 @@ async function scanProvenance(
     await app?.stop();
     await collector.close();
   }
+}
+
+/** The app's own last words, which usually say exactly what went wrong. */
+function appStartupHint(app: ReturnType<typeof startApp> | undefined): string {
+  const output = app?.output().trim();
+  if (output === undefined || output === "") return "";
+  const lastLines = output.split("\n").slice(-3).join(" ").trim();
+  return lastLines === "" ? "" : ` — it said: ${lastLines}`;
 }
 
 async function exerciseRoutes(appUrl: string, routes: string[]): Promise<string[]> {
