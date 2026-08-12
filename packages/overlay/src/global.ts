@@ -24,9 +24,11 @@ function readEndpoint(): string | undefined {
 }
 
 function start(): void {
+  // `mountOverlay` registers itself on `window.__groundtrace__`, so an app that
+  // already mounts its own overlay is left alone rather than double-mounted.
   if (window.__groundtrace__ !== undefined) return;
   const endpoint = readEndpoint();
-  window.__groundtrace__ = mountOverlay(endpoint !== undefined ? { endpoint } : {});
+  mountOverlay(endpoint !== undefined ? { endpoint } : {});
 }
 
 if (document.readyState === "loading") {

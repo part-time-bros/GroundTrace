@@ -1,6 +1,69 @@
 export { parseArgs, flagBool, flagNumber, flagString, type ParsedArgs } from "./args.js";
 export { dispatch, printHelp } from "./dispatch.js";
 export {
+  CONFIG_FILENAME,
+  DEFAULT_CONFIG,
+  configPath,
+  loadConfig,
+  saveConfig,
+  type GroundTraceConfig,
+} from "./config.js";
+export {
+  HOOK_COMMAND,
+  alreadyPresent,
+  mergeStopHook,
+  type ClaudeSettings,
+  type HookEntry,
+  type HookMatcher,
+} from "./claude-hook.js";
+export {
+  extractFallbackLiterals,
+  extractIds,
+  scanProject,
+  type ScanResult,
+} from "./scan.js";
+export {
+  OVERLAY_PATH,
+  injectOverlayTag,
+  overlayScript,
+  startCollectorServer,
+  type CollectorServer,
+  type CollectorServerOptions,
+} from "./server.js";
+export {
+  startApp,
+  waitForApp,
+  type AppProcess,
+  type StartAppOptions,
+} from "./app-process.js";
+export {
+  loadVerifyResult,
+  reportPath,
+  saveVerifyResult,
+  REPORT_DIR,
+  REPORT_FILE,
+} from "./report-store.js";
+export {
+  CLAUDE_SETTINGS_PATH,
+  detectConfig,
+  runInit,
+  writeClaudeHook,
+  type InitOptions,
+  type InitResult,
+} from "./commands/init.js";
+export { runRun, type RunOptions } from "./commands/run.js";
+export { runReport, type ReportOptions } from "./commands/report.js";
+export {
+  formatFlagged,
+  formatVerify,
+  runVerify,
+  verifyExitCode,
+  type BuildEvidence,
+  type ProvenanceEvidence,
+  type VerifyOptions,
+  type VerifyResult,
+} from "./commands/verify.js";
+export {
   detectRunner,
   formatEvidence,
   parseCounts,

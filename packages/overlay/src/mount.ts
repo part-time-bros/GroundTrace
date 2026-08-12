@@ -33,6 +33,18 @@ export interface OverlayHandle {
 
 const HOST_ID = "groundtrace-overlay-host";
 
+/**
+ * Where the live handle is parked so a second mount can retire the first.
+ *
+ * This happens for real: `groundtrace run` injects the overlay into every HTML
+ * response, and an app that already imports `mountOverlay` itself then mounts a
+ * second one. Without this, both instances keep their document-level listeners
+ * and every click is handled twice.
+ */
+const HANDLE_KEY = "__groundtrace__";
+
+type WindowWithHandle = Window & { [HANDLE_KEY]?: OverlayHandle };
+
 export function mountOverlay(options: OverlayOptions = {}): OverlayHandle {
   const doc = options.document ?? globalThis.document;
   if (doc === undefined) {
@@ -42,6 +54,8 @@ export function mountOverlay(options: OverlayOptions = {}): OverlayHandle {
   const fetchProvenance = options.fetchProvenance ?? makeFetcher(options.endpoint);
 
   // --- host + shadow root -------------------------------------------------
+  const view = doc.defaultView as WindowWithHandle | null;
+  view?.[HANDLE_KEY]?.destroy();
   doc.getElementById(HOST_ID)?.remove();
   const host = doc.createElement("div");
   host.id = HOST_ID;
@@ -72,7 +86,7 @@ export function mountOverlay(options: OverlayOptions = {}): OverlayHandle {
   async function open(id: string, trigger?: Element): Promise<void> {
     const mine = ++generation;
     openId = id;
-    lastTrigger = trigger ?? doc.activeElement ?? undefined ?? undefined;
+    lastTrigger = trigger ?? doc.activeElement ?? undefined;
 
     try {
       const value = await fetchProvenance(id);
@@ -137,7 +151,7 @@ export function mountOverlay(options: OverlayOptions = {}): OverlayHandle {
 
   const stopEnhancing = options.enhanceFocus === false ? () => {} : enhanceFocus(doc);
 
-  return {
+  const handle: OverlayHandle = {
     open,
     close,
     destroy() {
@@ -147,11 +161,15 @@ export function mountOverlay(options: OverlayOptions = {}): OverlayHandle {
       host.remove();
       hostStyle.remove();
       openId = undefined;
+      if (view?.[HANDLE_KEY] === handle) delete view[HANDLE_KEY];
     },
     get openId() {
       return openId;
     },
   };
+
+  if (view !== null) view[HANDLE_KEY] = handle;
+  return handle;
 }
 
 function withComponent(

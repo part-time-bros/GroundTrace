@@ -35,9 +35,13 @@ export function paint(text: string, ink: Ink): string {
 
 export const RULE = "━";
 
+/** Widest rule we will ever draw — beyond this it stops looking like a box. */
+const MAX_RULE = 72;
+
 /** A titled box: the report format the pitch specified, verbatim. */
 export function box(title: string, lines: string[], ruleWidth?: number): string {
-  const width = ruleWidth ?? Math.max(title.length, ...lines.map(visibleLength), 20);
+  const natural = Math.max(title.length, ...lines.map(visibleLength), 20);
+  const width = ruleWidth ?? Math.min(natural, MAX_RULE);
   return [paint(title, "bold"), RULE.repeat(width), ...lines].join("\n");
 }
 

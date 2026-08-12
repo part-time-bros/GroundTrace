@@ -63,6 +63,12 @@ export interface ClientNodeEvent {
   traceId?: string;
   /** Best-effort `.tsx` file and line, read off a captured stack. */
   callSite?: string;
+  /**
+   * False when the value was inferred rather than read from the DOM — a
+   * headless `groundtrace verify` scan knows an id exists and knows which
+   * source feeds it, but never saw anything rendered. Defaults to true.
+   */
+  valueObserved?: boolean;
   /** Named transform(s) applied between the API response and the DOM. */
   transform?: string | string[];
   /** Component that rendered it, when the SDK could work it out. */

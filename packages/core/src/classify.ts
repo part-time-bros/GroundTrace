@@ -201,18 +201,25 @@ function decide(
   }
 
   // Rule 4 — a real source succeeded and the number on screen is its number.
+  const sourceId = verified[0]!.sourceId;
   return {
     status: "VERIFIED",
     reason:
       proof === "proven"
-        ? `"${verified[0]!.sourceId}" succeeded and the displayed value matches what it returned`
-        : `"${verified[0]!.sourceId}" succeeded and no transform was declared (the source did not record its value, so the match is assumed)`,
+        ? `"${sourceId}" succeeded and the displayed value matches what it returned`
+        : proof === "unobserved"
+          ? `"${sourceId}" succeeded; this scan verified the server side only and never read the rendered value`
+          : `"${sourceId}" succeeded and no transform was declared (the source did not record its value, so the match is assumed)`,
   };
 }
 
-type Passthrough = "proven" | "mismatch" | "unrecorded";
+type Passthrough = "proven" | "mismatch" | "unobserved" | "unrecorded";
 
 function passthroughProof(client: ClientNodeEvent, verified: TraceEvent[]): Passthrough {
+  // Nothing was rendered for us to compare against. Saying "the value changed"
+  // here would be a fabrication — we never saw a value at all.
+  if (client.valueObserved === false) return "unobserved";
+
   for (const event of verified) {
     const recorded = event.values;
     if (recorded === undefined || !(client.id in recorded)) continue;
@@ -303,8 +310,13 @@ function buildTree(
 
   const componentLabel = client.component ?? client.callSite ?? "unknown call site";
 
+  const headline =
+    client.valueObserved === false
+      ? `${client.id} (rendered value not observed)`
+      : `${client.id} = ${formatValue(client.value)}`;
+
   return {
-    label: `${client.id} = ${formatValue(client.value)}`,
+    label: headline,
     status: verdict.status,
     detail: verdict.reason,
     children: [

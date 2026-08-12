@@ -1,0 +1,9 @@
+{
+  "dev": "npm run dev",
+  "appPort": 3000,
+  "port": 7777,
+  "build": "npm run build",
+  "test": "pnpm -w test",
+  "routes": ["/", "/api/revenue"],
+  "scan": ["app", "components", "lib"]
+}
