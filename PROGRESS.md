@@ -7,7 +7,7 @@ Phase status: NOT_STARTED / IN_PROGRESS / DONE / BLOCKED
 - [x] Phase 2 — Node provenance SDK — **DONE**
 - [x] Phase 3 — React provenance SDK — **DONE**
 - [x] Phase 4 — Correlation + classification — **DONE**
-- [ ] Phase 5 — Browser overlay
+- [x] Phase 5 — Browser overlay — **DONE**
 - [ ] Phase 6 — Reference demo
 - [ ] Phase 7 — CLI
 - [ ] Phase 8 — Claude Code hook
@@ -24,3 +24,4 @@ Phase status: NOT_STARTED / IN_PROGRESS / DONE / BLOCKED
 - **Phase 2 — Node provenance SDK.** `@groundtrace/node`: `runWithTrace`/`withTrace`/`withTraceSync` over `AsyncLocalStorage`, `instrumentedQuery`/`instrumentedGet`, `tracedFetch`, `traceRoute` for Next App Router, best-effort collector sink. 29 tests. Acceptance: two deliberately interleaved requests (one success, one throw) each hold exactly their own event and never the other's; a ten-request interleaved variant holds too; `withTrace` outside any `runWithTrace` returns the value, re-throws real errors, and records nothing.
 - **Phase 3 — React provenance SDK.** `@groundtrace/react`: `useTruthValue`, `<Truth>`, `<TraceScope>`, `useTracedQuery`/`tracedFetchJson` (mints the `x-groundtrace-id` header), stack-based call-site capture, batched swappable transport. 20 component tests under jsdom. Acceptance: `<Truth id="x" source="/api/y">42</Truth>` renders `<span data-truth-id="x">42</span>`; three no-op re-renders report zero extra events while a value change reports exactly one more, including when the tracked value is a fresh object identity each render.
 - **Phase 4 — Correlation + classification.** `@groundtrace/core`: `classify`/`classifyValue`/`buildReport` implementing §4's five rules in order, `EventStore`, a transport-agnostic collector handler, and the shared box-drawing tree renderer. 40 core tests + 9 integration tests. Acceptance: one passing fixture per status (VERIFIED, INDIRECT, FALLBACK, SYNTHETIC, UNTRACED); the integration suite drives a **real** `traceRoute` + `instrumentedGet` and a **really rendered** `useTruthValue` component through both toggle states — 100% confidence healthy, 0% with the failure simulated, and the same value moving 🟢 → 🟠.
+- **Phase 5 — Browser overlay.** `@groundtrace/overlay`: shadow-DOM panel in the §5 terminal aesthetic (monospace, `└──` connectors, greyscale with the five status colours as the only colour), `bippy` used solely to name the component behind a clicked node, plus a self-mounting IIFE bundle for CLI injection. 17 jsdom tests. Acceptance: a VERIFIED click renders green ending at the real SQL; a FALLBACK click renders orange ending at the catch block and contains "not backed by live data" verbatim; Escape closes and returns focus to the value that opened it; the DEV MODE badge is on screen.

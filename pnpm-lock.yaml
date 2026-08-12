@@ -61,6 +61,9 @@ importers:
       '@groundtrace/core':
         specifier: workspace:*
         version: link:../core
+      bippy:
+        specifier: ^0.6.1
+        version: 0.6.1(react@19.2.8)
     devDependencies:
       jsdom:
         specifier: ^30.0.1
@@ -729,6 +732,11 @@ packages:
 
   bidi-js@1.0.3:
     resolution: {integrity: sha512-RKshQI1R3YQ+n9YJz2QQ147P66ELpa1FQEg20Dk8oW9t2KgLbpDLLp9aGZ7y8WHSshDknG0bknqGw5/tyCs5tw==}
+
+  bippy@0.6.1:
+    resolution: {integrity: sha512-ky4m94Y/KfsddjGkKTsV4uFjZqkJjpOjQ2t5gKPdX6XH1MNxMNX5FrVefsxV4lpjemEmEdwe0e0YbzAMNs3oUQ==}
+    peerDependencies:
+      react: '>=17.0.1'
 
   brace-expansion@5.0.9:
     resolution: {integrity: sha512-ScQ4IuvIEF1TMlP7Zt+vjJ//9zlPb2SDcxWxM3bk8s6t6GGdJ7KO1dCcTidOPJKePW30LE/2cT7wCyPho9/Wxg==}
@@ -1984,6 +1992,10 @@ snapshots:
   bidi-js@1.0.3:
     dependencies:
       require-from-string: 2.0.2
+
+  bippy@0.6.1(react@19.2.8):
+    dependencies:
+      react: 19.2.8
 
   brace-expansion@5.0.9:
     dependencies:

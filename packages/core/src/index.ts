@@ -29,4 +29,9 @@ export {
   type CollectorRequest,
   type CollectorResponse,
 } from "./collector.js";
-export { renderTree, type RenderTreeOptions } from "./render.js";
+export {
+  flattenTree,
+  renderTree,
+  type RenderTreeOptions,
+  type TreeRow,
+} from "./render.js";

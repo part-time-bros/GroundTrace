@@ -23,7 +23,8 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@groundtrace/core": "workspace:*"
+    "@groundtrace/core": "workspace:*",
+    "bippy": "^0.6.1"
   },
   "devDependencies": {
     "jsdom": "^30.0.1"
