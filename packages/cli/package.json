@@ -1,0 +1,32 @@
+{
+  "name": "groundtrace",
+  "version": "0.1.0",
+  "description": "GroundTrace CLI: verify what your app actually shows, instead of trusting 'Done ✅'.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "groundtrace": "./dist/bin.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@groundtrace/core": "workspace:*",
+    "@groundtrace/node": "workspace:*",
+    "@groundtrace/overlay": "workspace:*"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

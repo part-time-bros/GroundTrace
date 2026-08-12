@@ -1,0 +1,31 @@
+{
+  "name": "@groundtrace/overlay",
+  "version": "0.1.0",
+  "description": "GroundTrace browser overlay: click a [data-truth-id] element, see its provenance tree.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./overlay.global.js": "./dist/overlay.global.js"
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/bundle.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@groundtrace/core": "workspace:*"
+  },
+  "devDependencies": {
+    "jsdom": "^30.0.1"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
