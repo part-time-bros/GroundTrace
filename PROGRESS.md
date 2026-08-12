@@ -13,6 +13,18 @@ Phase status: NOT_STARTED / IN_PROGRESS / DONE / BLOCKED
 - [x] Phase 8 — Claude Code hook — **DONE**
 - [x] Phase 9 — Docs + final QA — **DONE**
 
+## V2 (docs/V2_SPEC.md)
+
+- [x] Phase 10 — Real DOM scan in `verify` — **DONE**
+- [x] Phase 11 — MCP server — **DONE**
+- [x] Phase 12 — Express/Fastify adapters — **DONE**
+- [x] Phase 13 — Postgres adapter — **DONE**
+- [x] Phase 14 — Automatic instrumentation — **DONE**
+- [x] Phase 15 — Production-safe mode — **DONE**
+- [x] Phase 16 — CI integration + blocking Stop hook — **DONE**
+- [x] Phase 17 — Vue adapter — **DONE**
+- [x] Phase 18 — V2 docs + final QA — **DONE**
+
 ## Blocked
 
 Nothing. Two issues were hit and resolved rather than parked:
@@ -39,3 +51,14 @@ Nothing. Two issues were hit and resolved rather than parked:
 - **Phase 9 — Docs + final QA.** Root README (pitch, before/after screenshot pair, install, two-minute quickstart, "how it works", license) plus a README per package, and real captured screenshots in `docs/media/`. Fresh name check: no npm registration for `groundtrace` or the `@groundtrace/*` scope, and no notable same-name project — the rename away from "TruthLens" still holds. Final QA run from a genuinely fresh `git clone`, not the working tree: `pnpm install`, `pnpm build` (packages **and** the Next demo), `pnpm test` (193), `pnpm lint` all clean, and the demo driven in a real browser from a cold start with no manual setup.
 
 Producing the screenshots surfaced and fixed a real cold-start race: on a fresh dev server the collector route takes ~1s to compile, so the first click queried before the first client report landed and the overlay showed `UNTRACED`. The overlay now waits on the SDK's in-flight reports — which in turn required `defaultTransport` to return its request promise instead of firing it with `void fetch(...)`. Covered by a regression test.
+
+### V2 log
+
+- **Phase 10 — Real DOM scan.** `verify` loads each route in a real browser (Playwright resolved at runtime, never a dependency) so the app's own SDK reports the values it rendered. Closes V1's one structural weakness: it can now *prove* a displayed number matches its source instead of verifying the server side and marking the value unobserved. The report states which basis it used. Acceptance: healthy demo → "matches what it returned" with `(rendered in a browser)`; `--no-browser` → the weaker basis, stated plainly; failure state → FALLBACK, 0%, under both.
+- **Phase 11 — MCP server.** `@groundtrace/mcp` / `groundtrace-mcp` exposing `verify_app`, `list_tracked_values`, `explain_value`, `verify_tests`, `last_report` over stdio, plus `init --mcp` to register it. 16 tests driven through a real in-memory MCP client, and verified over real stdio against the demo. With no saved report the read-only tools error rather than returning something an agent could read as a pass.
+- **Phase 12 — Express/Fastify adapters.** `groundtraceMiddleware`, `groundtraceFastify`, `withTracedRequest`. Tested against real Express 5 and Fastify 5 servers over real HTTP — which is how the double-report bug (`finish` *and* `close` both firing) was found.
+- **Phase 13 — Postgres adapter.** `instrumentedQueryAsync` / `instrumentedGetAsync`, structurally typed against the `pg` client shape. An empty result is `VERIFIED`, not a fallback.
+- **Phase 14 — Automatic instrumentation.** `@groundtrace/auto` tags displayed values by matching them against what traced sources recorded — zero SDK calls in the app. Reversed V2_SPEC's fiber-walk sketch in favour of DOM matching, which works for React, Vue, Svelte, and server-rendered HTML alike. Ambiguity is reported, never guessed.
+- **Phase 15 — Production-safe mode.** Off unless explicitly enabled, deterministic sampling per trace id, values redacted to type + magnitude + digest. `valuesMatch` compares digests, so passthrough proof survives redaction while the figure never leaves the process.
+- **Phase 16 — CI + blocking hook.** `--json`, `--fail-under <n>`, a reusable GitHub Action, and `--block` emitting Claude Code hook JSON. BUILD_SPEC §8 deferred blocking until the score had a basis; §10 is that basis, and it stays opt-in.
+- **Phase 18 — V2 docs + QA.** V2_SPEC.md, README rewritten for the new capabilities, READMEs for the three new packages, and a fresh-clone verification.

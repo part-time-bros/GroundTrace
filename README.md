@@ -57,6 +57,32 @@ passthrough was *proven* against a recorded source value or merely assumed.
 
 ---
 
+## For agents
+
+GroundTrace ships as MCP tools, so an agent can check its own work *before* it says
+"Done ✅" rather than leaving you to find out later:
+
+```bash
+npx groundtrace init --mcp
+```
+
+| Tool | Does |
+|---|---|
+| `verify_app` | Builds, tests, and traces the app; returns the confidence report |
+| `list_tracked_values` | Every tracked value with its status and reasoning |
+| `explain_value` | One value's full component → state → API → database chain |
+| `verify_tests` | Runs a test command and reports the real evidence |
+| `last_report` | The saved report, without re-running anything |
+
+With no saved report, the read-only tools return an *error* telling the agent to run
+`verify_app` first — never an empty result it could mistake for a pass.
+
+For CI, `groundtrace verify --fail-under 95 --json` gates the build on the same number, and
+`--block` emits Claude Code hook JSON that stops a turn when values aren't backed by real
+sources.
+
+---
+
 ## Install
 
 ```bash
@@ -165,11 +191,37 @@ npx groundtrace run
 
 | Command | Does |
 |---|---|
-| `groundtrace init` | Scaffolds config into an existing Next.js project |
+| `groundtrace init` | Scaffolds config; `--mcp` and `--claude-code-hook` wire up Claude Code |
 | `groundtrace run` | Starts the app + collector + overlay injection together |
 | `groundtrace verify-tests -- <cmd>` | Runs a test command and reports the real evidence |
 | `groundtrace verify` | Build + tests + provenance scan as one confidence report |
 | `groundtrace report` | Prints the last `verify` run; `--id revenue` for one value's tree |
+| `groundtrace-mcp` | The MCP server, over stdio |
+
+`verify` loads your app in a real browser when Playwright is available, so it can *prove* the
+displayed number matches its source. Without one it verifies the server side only — and says
+so, rather than printing a confidence figure it cannot back.
+
+### Beyond Next.js and React
+
+| | |
+|---|---|
+| **Express / Fastify** | `app.use(groundtraceMiddleware())` · `app.register(groundtraceFastify)` |
+| **Postgres** | `instrumentedQueryAsync` / `instrumentedGetAsync`, same shape as the SQLite pair |
+| **Vue** | `@groundtrace/vue` — same events, same overlay, same CLI |
+| **No instrumentation at all** | `@groundtrace/auto` matches displayed numbers against traced sources and tags them for you |
+
+### Production
+
+V1 was dev-only by design. V2 makes that a setting rather than an assumption: production mode
+is **off unless explicitly enabled**, samples deterministically per trace id, and redacts
+recorded values to a type, a magnitude bucket, and a digest. The classifier still works on
+those — "this came out of a catch block" survives redaction; the customer's revenue figure
+never leaves the process.
+
+```bash
+GROUNDTRACE_MODE=production GROUNDTRACE_SAMPLE_RATE=0.05 node server.js
+```
 
 ---
 
@@ -213,18 +265,26 @@ mode, no hosted dashboard, and no accounts — see the non-goals in
 | [`@groundtrace/node`](packages/node) | Server SDK — request-scoped tracing, DB/fetch wrappers |
 | [`@groundtrace/react`](packages/react) | React SDK — `useTruthValue`, `<Truth>`, `<TraceScope>` |
 | [`@groundtrace/overlay`](packages/overlay) | The browser overlay, as a module and a standalone bundle |
+| [`@groundtrace/vue`](packages/vue) | Vue SDK — `useTruthValue` composable, `<Truth>` |
+| [`@groundtrace/auto`](packages/auto) | Zero-config tagging, no SDK calls required |
+| [`@groundtrace/mcp`](packages/mcp) | MCP server — provenance as agent-callable tools |
 
 ## Development
 
 ```bash
 pnpm install
 pnpm build
-pnpm test        # 193 tests
+pnpm test        # 294 tests
 pnpm lint
 ```
 
 `pnpm test` includes an end-to-end check that boots the real demo and runs `groundtrace
-verify` against both toggle states. Set `GROUNDTRACE_SKIP_E2E=1` to skip it.
+verify` against both toggle states, plus adapter tests against real Express, Fastify, and Vue.
+Set `GROUNDTRACE_SKIP_E2E=1` to skip the slow demo run.
+
+The build is specified in [`docs/BUILD_SPEC.md`](docs/BUILD_SPEC.md) (V1) and
+[`docs/V2_SPEC.md`](docs/V2_SPEC.md) (V2); every judgement call made along the way is logged
+in [`DECISIONS.md`](DECISIONS.md).
 
 ## License
 
